@@ -512,4 +512,9 @@ router.post('/forgot-password', authController.forgotPassword);
 router.post('/verify-otp', authController.verifyOtp);
 router.post('/reset-password', authController.resetPassword);
 
+// ── Vendor forgot password (contactNumber-based) ─────────────────────────────
+router.post('/vendor/forgot-password', authController.forgotPasswordVendor);
+router.post('/vendor/verify-otp', authController.verifyOtpVendor);
+router.post('/vendor/reset-password', authController.resetPasswordVendor);
+
 module.exports = router; 

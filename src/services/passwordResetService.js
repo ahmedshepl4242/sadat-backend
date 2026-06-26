@@ -134,4 +134,94 @@ const resetPassword = async (resetToken, newPassword) => {
   return { message: 'تم تغيير كلمة المرور بنجاح' };
 };
 
-module.exports = { sendOtp, verifyOtp, resetPassword };
+// ── Vendor (contactNumber-based) ─────────────────────────────────────────────
+
+const sendOtpVendor = async (contactNumber, tenantId) => {
+  const record = await prisma.vendor.findFirst({
+    where: { contactNumber, tenantId },
+    select: { id: true },
+  });
+
+  // Always return success to avoid enumeration
+  if (!record) {
+    return { message: 'إذا كان الرقم مسجلاً، ستصل رسالة بالرمز' };
+  }
+
+  await prisma.passwordResetToken.updateMany({
+    where: { email: contactNumber, role: 'vendor', tenantId, used: false },
+    data: { used: true },
+  });
+
+  const otp = generateOtp();
+  const otpHash = await bcrypt.hash(otp, 10);
+  const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+
+  await prisma.passwordResetToken.create({
+    data: { tenantId, email: contactNumber, role: 'vendor', otpHash, expiresAt },
+  });
+
+  await sendOtpEmail(contactNumber, otp);
+
+  return { message: 'إذا كان الرقم مسجلاً، ستصل رسالة بالرمز' };
+};
+
+const verifyOtpVendor = async (contactNumber, otp, tenantId) => {
+  const token = await prisma.passwordResetToken.findFirst({
+    where: {
+      email: contactNumber,
+      role: 'vendor',
+      tenantId,
+      used: false,
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (!token) throw new Error('الرمز غير صحيح أو منتهي الصلاحية');
+
+  const valid = await bcrypt.compare(otp, token.otpHash);
+  if (!valid) throw new Error('الرمز غير صحيح أو منتهي الصلاحية');
+
+  await prisma.passwordResetToken.update({
+    where: { id: token.id },
+    data: { used: true },
+  });
+
+  const resetToken = jwt.sign(
+    { contactNumber, role: 'vendor', tenantId, purpose: 'password_reset' },
+    process.env.JWT_SECRET,
+    { expiresIn: RESET_TOKEN_EXPIRY_SECONDS }
+  );
+
+  return { resetToken };
+};
+
+const resetPasswordVendor = async (resetToken, newPassword) => {
+  let decoded;
+  try {
+    decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+  } catch {
+    throw new Error('رمز إعادة التعيين غير صحيح أو منتهي الصلاحية');
+  }
+
+  if (decoded.purpose !== 'password_reset' || decoded.role !== 'vendor') {
+    throw new Error('رمز غير صالح');
+  }
+
+  const { contactNumber, tenantId } = decoded;
+  const vendor = await prisma.vendor.findFirst({
+    where: { contactNumber, tenantId },
+    select: { id: true, tenantId: true },
+  });
+  if (!vendor) throw new Error('المتجر غير موجود');
+
+  const hashed = await hashPassword(newPassword);
+  await prisma.vendor.update({
+    where: { id_tenantId: { id: vendor.id, tenantId } },
+    data: { password: hashed },
+  });
+
+  return { message: 'تم تغيير كلمة المرور بنجاح' };
+};
+
+module.exports = { sendOtp, verifyOtp, resetPassword, sendOtpVendor, verifyOtpVendor, resetPasswordVendor };

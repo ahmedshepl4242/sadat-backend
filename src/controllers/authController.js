@@ -212,6 +212,51 @@ class AuthController {
       return errorResponse(res, error.message, 400);
     }
   }
+
+  // Vendor forgot password — step 1: send OTP to contactNumber (stored as email field)
+  async forgotPasswordVendor(req, res) {
+    try {
+      const { contactNumber } = req.body;
+      if (!contactNumber) {
+        return errorResponse(res, 'رقم التواصل مطلوب', 400);
+      }
+      const result = await passwordResetService.sendOtpVendor(contactNumber, req.tenant.id);
+      return successResponse(res, null, result.message);
+    } catch (error) {
+      return errorResponse(res, error.message, 500);
+    }
+  }
+
+  // Vendor forgot password — step 2: verify OTP
+  async verifyOtpVendor(req, res) {
+    try {
+      const { contactNumber, otp } = req.body;
+      if (!contactNumber || !otp) {
+        return errorResponse(res, 'رقم التواصل والرمز مطلوبان', 400);
+      }
+      const result = await passwordResetService.verifyOtpVendor(contactNumber, otp, req.tenant.id);
+      return successResponse(res, result, 'تم التحقق من الرمز بنجاح');
+    } catch (error) {
+      return errorResponse(res, error.message, 400);
+    }
+  }
+
+  // Vendor forgot password — step 3: reset password
+  async resetPasswordVendor(req, res) {
+    try {
+      const { resetToken, newPassword } = req.body;
+      if (!resetToken || !newPassword) {
+        return errorResponse(res, 'رمز إعادة التعيين وكلمة المرور الجديدة مطلوبان', 400);
+      }
+      if (newPassword.length < 6) {
+        return errorResponse(res, 'كلمة المرور يجب أن تكون 6 أحرف على الأقل', 400);
+      }
+      const result = await passwordResetService.resetPasswordVendor(resetToken, newPassword);
+      return successResponse(res, null, result.message);
+    } catch (error) {
+      return errorResponse(res, error.message, 400);
+    }
+  }
 }
 
 module.exports = new AuthController(); 
