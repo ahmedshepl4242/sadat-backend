@@ -1,0 +1,390 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             BigInt   @default(autoincrement())
+  tenantId       String   @map("tenant_id")
+  userName       String   @map("user_name")
+  email          String
+  address        String
+  phoneNumber    String   @map("phone_number")
+  password       String
+  fcmToken       String?  @map("fcm_token")
+  refreshToken   String?  @map("refresh_token")
+  neighborhoodId BigInt   @map("neighborhood_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  orders       Order[]
+  complains    Complain[]
+  neighborhood Neighborhood  @relation(fields: [neighborhoodId, tenantId], references: [id, tenantId], onDelete: SetNull)
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([id, tenantId])
+  @@unique([userName, tenantId])
+  @@unique([email, tenantId])
+  @@unique([phoneNumber, tenantId])
+  @@map("users")
+}
+
+model Captain {
+  id          BigInt   @default(autoincrement())
+  tenantId       String   @map("tenant_id")
+  userName    String   @map("user_name")
+  email       String
+  longitude      Float?   @map("longitude")
+  latitude       Float?   @map("latitude")
+  phoneNumber    String   @map("phone_number")
+  password       String
+  fcmToken       String?  @map("fcm_token")
+  refreshToken   String?  @map("refresh_token")
+  workingHoursStart String? @map("working_hours_start") // Format: "HH:MM"
+  workingHoursEnd   String? @map("working_hours_end")   // Format: "HH:MM"
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  isAvailable    Boolean  @default(true) @map("is_available")
+  isLocked       Boolean  @default(true) @map("is_locked") // Locked by default until admin approval
+  lastActivated  DateTime? @map("last_activated") // Last time admin activated this profile
+  ratingSum      Float    @default(0) @map("rating_sum")
+  ratingCount    Int      @default(0) @map("rating_count")
+  maxCurrentOrders        Int      @default(2) @map("max_current_orders") // Maximum orders captain can handle at once
+  currentNumberOfOrders   Int      @default(0) @map("current_number_of_orders") // Current active orders count
+  earningSinceLastActivation Float @default(0) @map("earning_since_last_activation") // Earnings accumulated since last activation
+  maxEarningsSinceLastActivation Float @default(0) @map("max_earnings_since_last_activation") // Maximum earnings threshold
+  nationalId     String?  @map("national_id") // National ID number
+  photo          String?  @map("photo") // Wasabi URL storage for captain photo
+
+  // Relations
+  orders         Order[]
+  captainRequests CaptainRequest[]
+  tenant         Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([id, tenantId])
+  @@unique([userName, tenantId])
+  @@unique([email, tenantId])
+  @@unique([phoneNumber, tenantId])
+  @@map("captains")
+}
+
+model Vendor {
+  id             BigInt   @default(autoincrement())
+  tenantId       String   @map("tenant_id")
+  vendorName     String   @map("vendor_name")
+  contactNumber  String   @map("contact_number")
+  password       String
+  address        String
+  longitude      Float    @map("longitude")
+  latitude       Float    @map("latitude")
+  description    String?
+  isOpen         String   @default("true") @map("is_open") // Using String as per schema
+  isLocked       Boolean  @default(true) @map("is_locked") // Locked by default until admin approval
+  image          String?  @map("image") // Wasabi URL storage
+  fcmToken       String?  @map("fcm_token")
+  refreshToken   String?  @map("refresh_token")
+  neighborhoodId BigInt   @map("neighborhood_id")
+
+  // Relations
+  orders                   Order[]
+  menus                    Menu[]
+  items                    Item[]
+  vendorCategories         VendorCategory[]
+  neighborhood             Neighborhood              @relation(fields: [neighborhoodId, tenantId], references: [id, tenantId], onDelete: SetNull)
+  vendorNeighborhoodPrices VendorNeighborhoodPrice[]
+  tenant                   Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vendorComplains          VendorComplain[]
+
+  @@id([id, tenantId])
+  @@unique([vendorName, tenantId])
+  @@unique([contactNumber, tenantId])
+  @@map("vendors")
+}
+
+model Item {
+  id        BigInt  @default(autoincrement())
+  tenantId  String  @map("tenant_id")
+  name      String
+  description String?
+  imageLink String? @map("image_link")
+  price     Float
+  vendorId  BigInt  @map("vendor_id")
+  isAvailable Boolean @default(true) @map("is_available")
+
+  // Relations
+  vendor Vendor @relation(fields: [vendorId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([id, tenantId])
+  @@map("items")
+}
+
+model Category {
+  id       BigInt   @default(autoincrement())
+  tenantId String   @map("tenant_id")
+  name     String
+
+  // Relations
+  vendorCategories VendorCategory[]
+  tenant           Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([id, tenantId])
+  @@unique([name, tenantId])
+  @@map("categories")
+}
+
+model VendorCategory {
+  id         BigInt @default(autoincrement())
+  tenantId   String @map("tenant_id")
+  vendorId   BigInt @map("vendor_id")
+  categoryId BigInt @map("category_id")
+
+  // Relations
+  vendor   Vendor   @relation(fields: [vendorId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  category Category @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([id, tenantId])
+  @@unique([vendorId, categoryId, tenantId])
+  @@map("vendor_categories")
+}
+
+model Order {
+  id                BigInt    @default(autoincrement())
+  tenantId          String    @map("tenant_id")
+  userId            BigInt?   @map("user_id") // Made nullable for vendor-created orders
+  captainId         BigInt?   @map("captain_id")
+  vendorId          BigInt    @map("vendor_id")
+  neighborhoodId    BigInt   @map("neighborhood_id")
+  status            OrderStatus
+  description       String?
+  additionalNotes   String?   @map("additional_notes")
+  userAddress       String?   @map("user_address")
+  userLongitude     Float?    @map("user_longitude") // Optional user longitude
+  userLatitude      Float?    @map("user_latitude") // Optional user latitude
+  phoneNumber       String    @map("phone_number") // Add phone number for each order
+  createdAt         DateTime  @default(now()) @map("created_at")
+  counterOfferSentAt DateTime? @map("counter_offer_sent_at")
+  acceptedByVend    DateTime? @map("accepted_by_vend")
+  acceptedByCapta   DateTime? @map("accepted_by_capta")
+  deliveredAt       DateTime? @map("delivered_at")
+  finalizedAt       DateTime? @map("finalized_at") // Add for user finalization
+  price             Float?
+  deliveryPrice     Float?    @map("delivery_price")
+  isRated           Boolean?  @default(false) @map("is_rated") // New field to track if order has been rated
+  waitingTime       Int?      @map("waiting_time") // Waiting time in minutes (set by vendor)
+
+  // Relations
+  user         User?         @relation(fields: [userId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  captain      Captain?      @relation(fields: [captainId, tenantId], references: [id, tenantId], onDelete: SetNull)
+  vendor       Vendor        @relation(fields: [vendorId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  neighborhood Neighborhood? @relation(fields: [neighborhoodId, tenantId], references: [id, tenantId], onDelete: SetNull)
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  attachments  OrderAttachment[]
+
+  @@id([id, tenantId])
+  @@map("orders")
+}
+
+model OrderAttachment {
+  id       BigInt         @default(autoincrement())
+  tenantId String         @map("tenant_id")
+  orderId  BigInt         @map("order_id")
+  type     AttachmentType
+  link     String
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  order  Order  @relation(fields: [orderId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([id, tenantId])
+  @@map("order_attachments")
+}
+
+enum AttachmentType {
+  VOICE
+  IMAGE
+}
+
+model Menu {
+  id       BigInt @default(autoincrement())
+  tenantId String @map("tenant_id")
+  photo    String // Wasabi URL storage for menu item photo
+  vendorId BigInt @map("vendor_id")
+
+  // Relations
+  vendor Vendor @relation(fields: [vendorId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([id, tenantId])
+  @@map("menus")
+}
+
+model Complain {
+  id          BigInt      @default(autoincrement())
+  tenantId    String      @map("tenant_id")
+  description String?
+  type        ComplainSource // Changed to identify source of complaint
+  userId      BigInt      @map("user_id")
+  submittedAt DateTime?   @map("submitted_at")
+  reply       String?
+  repliedAt   DateTime?   @map("replied_at")
+
+  // Relations
+  user   User   @relation(fields: [userId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([id, tenantId])
+  @@map("complains")
+}
+
+model VendorComplain {
+  id          BigInt      @default(autoincrement())
+  tenantId    String      @map("tenant_id")
+  description String?
+  type        ComplainSource // Changed to identify source of complaint
+  vendorId    BigInt      @map("vendor_id")
+  submittedAt DateTime?   @map("submitted_at")
+  reply       String?
+  repliedAt   DateTime?   @map("replied_at")
+
+  // Relations
+  vendor Vendor @relation(fields: [vendorId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([id, tenantId])
+  @@map("vendor_complains")
+}
+
+enum OrderStatus {
+  PENDING
+  REJECTED_BY_VENDOR
+  COUNTER_OFFER_SENT
+  COUNTER_OFFER_ACCEPTED
+  ACCEPTED_BY_CAPTAIN
+  DELIVERED
+  CANCELLED
+}
+
+model Neighborhood {
+  id          BigInt   @default(autoincrement())
+  tenantId    String   @map("tenant_id")
+  name        String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  users                    User[]
+  vendors                  Vendor[]
+  orders                   Order[]
+  vendorNeighborhoodPrices VendorNeighborhoodPrice[]
+  tenant                   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([id, tenantId])
+  @@unique([name, tenantId])
+  @@map("neighborhoods")
+}
+
+model VendorNeighborhoodPrice {
+  id             BigInt   @default(autoincrement())
+  tenantId       String   @map("tenant_id")
+  vendorId       BigInt   @map("vendor_id")
+  neighborhoodId BigInt   @map("neighborhood_id")
+  price          Float
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  vendor       Vendor       @relation(fields: [vendorId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  neighborhood Neighborhood @relation(fields: [neighborhoodId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([id, tenantId])
+  // Unique constraint to prevent duplicate pricing for same vendor-neighborhood combination
+  @@unique([vendorId, neighborhoodId, tenantId])
+  @@map("vendor_neighborhood_prices")
+}
+
+model CaptainRequest {
+  id          BigInt        @default(autoincrement())
+  tenantId    String        @map("tenant_id")
+  captainId   BigInt        @map("captain_id")
+  description String
+  status      RequestStatus @default(PENDING)
+  reply       String?
+  submittedAt DateTime      @default(now()) @map("submitted_at")
+  repliedAt   DateTime?     @map("replied_at")
+
+  // Relations
+  captain Captain @relation(fields: [captainId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([id, tenantId])
+  @@map("captain_requests")
+}
+
+model Tenant {
+  id           String   @id @map("tenant_id")
+  tenantName   String   @unique @map("tenant_name")
+  email        String   @unique
+  address      String
+  phoneNumber  String   @unique @map("phone_number")
+  password     String
+  fcmToken     String?  @map("fcm_token")
+  refreshToken String?  @map("refresh_token")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  users                    User[]
+  captains                 Captain[]
+  vendors                  Vendor[]
+  orders                   Order[]
+  menus                    Menu[]
+  complains                Complain[]
+  vendorComplains          VendorComplain[]
+  neighborhoods            Neighborhood[]
+  vendorNeighborhoodPrices VendorNeighborhoodPrice[]
+  captainRequests          CaptainRequest[]
+  orderAttachments         OrderAttachment[]
+  items                    Item[]
+  categories               Category[]
+  vendorCategories         VendorCategory[]
+
+  @@map("tenants")
+}
+
+model PasswordResetToken {
+  id        BigInt   @default(autoincrement()) @map("id")
+  tenantId  String   @map("tenant_id")
+  email     String
+  role      String   // "user" | "captain"
+  otpHash   String   @map("otp_hash")
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([id])
+  @@map("password_reset_tokens")
+}
+
+enum ComplainSource {
+  USER
+  VENDOR
+  CAPTAIN
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}

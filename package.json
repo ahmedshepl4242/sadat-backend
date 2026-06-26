@@ -1,0 +1,58 @@
+{
+  "name": "sadat_delivery",
+  "version": "1.0.0",
+  "description": "Delivery app backend with Express, PostgreSQL, and Prisma",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:happy": "node run_test.js",
+    "test:vendor": "node run_vendor_initiated_test.js",
+    "test:special": "node run_special_test.js",
+    "test:comprehensive": "node run_comprehensive_tests.js",
+    "test:all": "node run_all_tests_with_timing.js",
+    "test:analyze": "node analyze_test_timing.js"
+  },
+  "keywords": [
+    "delivery",
+    "express",
+    "postgresql",
+    "prisma"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^6.16.2",
+    "aws-sdk": "^2.1692.0",
+    "axios": "^1.12.2",
+    "axois": "^0.0.1-security",
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.18",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
+    "file-type": "^16.5.4",
+    "firebase-admin": "^12.0.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "moment-timezone": "^0.6.0",
+    "morgan": "^1.10.0",
+    "multer": "^2.0.2",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0",
+    "timezone": "^1.0.23",
+    "utc": "^0.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "prisma": "^6.16.2"
+  }
+}
