@@ -9,6 +9,7 @@ const transporter = nodemailer.createTransport({
 });
 
 const sendOtpEmail = async (to, otp) => {
+  try {
   await transporter.sendMail({
     from: `"تعالالي - T3alaly" <${process.env.GMAIL_USER}>`,
     to,
@@ -28,6 +29,10 @@ const sendOtpEmail = async (to, otp) => {
       </div>
     `,
   });
+  } catch (error) {
+    console.error('[emailService] Failed to send OTP email to:', to, '| Error:', error);
+    throw error;
+  }
 };
 
 module.exports = { sendOtpEmail };
