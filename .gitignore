@@ -112,3 +112,5 @@ prisma/migrations/
 
 # Private keys
 src/config/sadat-delivery-9d842-firebase-adminsdk-fbsvc-1796100788.json
+src/config/buss-3c283-firebase-adminsdk-fbsvc-4b9cd5b16f.json
+src/config/*-firebase-adminsdk-*.json
