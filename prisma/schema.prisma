@@ -359,8 +359,25 @@ model Tenant {
   items                    Item[]
   categories               Category[]
   vendorCategories         VendorCategory[]
+  announcements            Announcement[]
 
   @@map("tenants")
+}
+
+model Announcement {
+  id          BigInt    @default(autoincrement())
+  tenantId    String    @map("tenant_id")
+  title       String
+  body        String
+  imageUrl    String?   @map("image_url")
+  isPublished Boolean   @default(false) @map("is_published")
+  publishedAt DateTime? @map("published_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([id, tenantId])
+  @@map("announcements")
 }
 
 model PasswordResetToken {

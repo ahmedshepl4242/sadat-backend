@@ -31,6 +31,7 @@ const adminRoutes = require("./routes/admin");
 const adminSignupRoutes = require("./routes/adminSignup");
 const categoryRoutes = require("./routes/categories");
 const itemRoutes = require("./routes/items");
+const announcementRoutes = require("./routes/announcements");
 
 // Import middleware
 const { errorHandler } = require("./middlewares/errorHandler");
@@ -141,6 +142,7 @@ app.use("/api/captain-requests", extractTenant, captainRequestRoutes);
 app.use("/api/categories", extractTenant, categoryRoutes);
 app.use("/api/items", extractTenant, itemRoutes);
 app.use("/api/admin", extractTenant, adminRoutes);
+app.use("/api/announcements", extractTenant, announcementRoutes);
 
 // Error handling middleware
 app.use(notFound);

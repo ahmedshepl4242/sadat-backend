@@ -515,6 +515,52 @@ class NotificationService {
       tenantId
     );
   }
+
+  // Broadcast announcement to ALL users of a tenant
+  async sendToAllUsers(title, body, data = {}, tenantId) {
+    try {
+      const users = await prisma.user.findMany({
+        where: { tenantId, fcmToken: { not: null } },
+        select: { fcmToken: true },
+      });
+      const tokens = users.map(u => u.fcmToken).filter(Boolean);
+      if (tokens.length === 0) return false;
+      const BATCH_SIZE = 500;
+      let success = false;
+      for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
+        const batch = tokens.slice(i, i + BATCH_SIZE);
+        const result = await this.sendMulticastNotification(batch, title, body, { ...data, userType: 'USER' });
+        if (result) success = true;
+      }
+      return success;
+    } catch (error) {
+      console.error('Error sending notification to all users:', error);
+      return false;
+    }
+  }
+
+  // Broadcast announcement to ALL captains of a tenant
+  async sendToAllCaptains(title, body, data = {}, tenantId) {
+    try {
+      const captains = await prisma.captain.findMany({
+        where: { tenantId, fcmToken: { not: null } },
+        select: { fcmToken: true },
+      });
+      const tokens = captains.map(c => c.fcmToken).filter(Boolean);
+      if (tokens.length === 0) return false;
+      const BATCH_SIZE = 500;
+      let success = false;
+      for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
+        const batch = tokens.slice(i, i + BATCH_SIZE);
+        const result = await this.sendMulticastNotification(batch, title, body, { ...data, userType: 'CAPTAIN' });
+        if (result) success = true;
+      }
+      return success;
+    } catch (error) {
+      console.error('Error sending notification to all captains:', error);
+      return false;
+    }
+  }
 }
 
 module.exports = new NotificationService(); 
