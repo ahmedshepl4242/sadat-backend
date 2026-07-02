@@ -433,6 +433,53 @@ class AdminController {
       return errorResponse(res, error.message, 400);
     }
   }
+
+  async releaseCaptain(req, res) {
+    try {
+      const result = await orderService.releaseCaptain(req.params.orderId, req.tenant.id);
+      return successResponse(res, result, 'Captain released successfully');
+    } catch (error) {
+      return errorResponse(res, error.message, 400);
+    }
+  }
+
+  async assignCaptain(req, res) {
+    try {
+      const { captainId } = req.body;
+      if (!captainId) return errorResponse(res, 'captainId is required', 400);
+      const result = await orderService.assignCaptain(req.params.orderId, captainId, req.tenant.id);
+      return successResponse(res, result, 'Captain assigned successfully');
+    } catch (error) {
+      return errorResponse(res, error.message, 400);
+    }
+  }
+
+  async deleteUser(req, res) {
+    try {
+      await adminService.deleteUser(req.params.id, req.tenant.id);
+      return successResponse(res, null, 'User deleted successfully');
+    } catch (error) {
+      return errorResponse(res, error.message, 400);
+    }
+  }
+
+  async deleteCaptain(req, res) {
+    try {
+      await adminService.deleteCaptain(req.params.id, req.tenant.id);
+      return successResponse(res, null, 'Captain deleted successfully');
+    } catch (error) {
+      return errorResponse(res, error.message, 400);
+    }
+  }
+
+  async deleteVendor(req, res) {
+    try {
+      await adminService.deleteVendor(req.params.id, req.tenant.id);
+      return successResponse(res, null, 'Vendor deleted successfully');
+    } catch (error) {
+      return errorResponse(res, error.message, 400);
+    }
+  }
 }
 
 module.exports = new AdminController();

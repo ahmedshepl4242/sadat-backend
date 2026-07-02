@@ -360,6 +360,7 @@ router.get('/captains', protectAdmin, adminController.getAllCaptains);
  *         description: Captain lock status updated successfully
  */
 router.put('/captains/:id/lock-status', protectAdmin, adminValidation.lockStatus, adminController.updateCaptainLockStatus);
+router.delete('/captains/:id', protectAdmin, adminController.deleteCaptain);
 
 /**
  * @swagger
@@ -490,6 +491,7 @@ router.get('/vendors', protectAdmin, paginationValidation, adminController.getAl
  *         description: Vendor lock status updated successfully
  */
 router.put('/vendors/:id/lock-status', protectAdmin, adminValidation.lockStatus, adminController.updateVendorLockStatus);
+router.delete('/vendors/:id', protectAdmin, adminController.deleteVendor);
 
 /**
  * @swagger
@@ -661,6 +663,7 @@ router.put('/captains/:id/activate', protectAdmin, adminController.activateCapta
  *                   example: Users retrieved successfully
  */
 router.get('/users', protectAdmin, paginationValidation, adminController.getAllUsers);
+router.delete('/users/:id', protectAdmin, adminController.deleteUser);
 
 /**
  * @swagger
@@ -2067,6 +2070,27 @@ router.get('/categories', protectAdmin, categoryController.getAllCategories);
 
 /**
  * @swagger
+ * /api/admin/categories/{id}:
+ *   delete:
+ *     summary: Delete a category (Admin only)
+ *     tags: [Admin - Categories]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Category ID
+ *     responses:
+ *       200:
+ *         description: Category deleted successfully
+ */
+router.delete('/categories/:id', protectAdmin, categoryController.deleteCategory);
+
+/**
+ * @swagger
  * /api/admin/orders:
  *   get:
  *     summary: Get all orders with filters (Admin only)
@@ -2297,5 +2321,7 @@ router.put('/captains/:id/set-max-limits', protectAdmin, adminController.setCapt
 router.put('/vendors/:id/reset-password', protectAdmin, adminController.resetVendorPassword);
 
 router.post('/orders/create-for-user', protectAdmin, adminController.createOrderForUser);
+router.put('/orders/:orderId/release-captain', protectAdmin, adminController.releaseCaptain);
+router.put('/orders/:orderId/assign-captain', protectAdmin, adminController.assignCaptain);
 
 module.exports = router;

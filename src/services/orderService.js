@@ -183,8 +183,6 @@ class OrderService {
     } catch (error) {
       console.error('Failed to send notification to vendor:', error);
     }
-
-
     return this.addAttachmentUrls(convertBigIntToString(order));
   }
 
@@ -1514,6 +1512,134 @@ class OrderService {
     });
 
     return this.addAttachmentUrls(convertBigIntToString(updatedOrder));
+  }
+
+  // Admin: release captain from order → back to available pool
+  async releaseCaptain(orderId, tenantId) {
+    return await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({
+        where: { id: BigInt(orderId), tenantId, status: 'ACCEPTED_BY_CAPTAIN' },
+        select: { id: true, captainId: true, userId: true, vendorId: true },
+      });
+      if (!order) throw new Error('Order not found or not in ACCEPTED_BY_CAPTAIN status');
+
+      // Decrement old captain's order count
+      await tx.captain.update({
+        where: { id_tenantId: { id: order.captainId, tenantId } },
+        data: { currentNumberOfOrders: { decrement: 1 } },
+      });
+
+      const captain = await tx.captain.findUnique({
+        where: { id_tenantId: { id: order.captainId, tenantId } },
+        select: { currentNumberOfOrders: true },
+      });
+      updateCaptainOrderCountsInCache(
+        order.captainId.toString(),
+        tenantId,
+        { currentNumberOfOrders: Math.max(0, captain.currentNumberOfOrders) }
+      );
+
+      const updated = await tx.order.update({
+        where: { id_tenantId: { id: BigInt(orderId), tenantId } },
+        data: { captainId: null, status: 'COUNTER_OFFER_ACCEPTED', acceptedByCapta: null },
+      });
+
+      // Notify all available captains
+      setImmediate(async () => {
+        try {
+          await notificationService.sendToAllAvailableCaptains(
+            'طلب توصيل متاح',
+            'طلب توصيل أصبح متاحًا مجددًا. تحقق من التطبيق للقبول.',
+            { orderId: orderId.toString(), type: 'DELIVERY_AVAILABLE' },
+            tenantId
+          );
+        } catch (e) { console.error('releaseCaptain notify error:', e); }
+      });
+
+      return convertBigIntToString(updated);
+    });
+  }
+
+  // Admin: assign a specific captain to an order
+  async assignCaptain(orderId, captainId, tenantId) {
+    return await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({
+        where: {
+          id: BigInt(orderId),
+          tenantId,
+          status: { in: ['COUNTER_OFFER_ACCEPTED', 'ACCEPTED_BY_CAPTAIN'] },
+        },
+        select: { id: true, captainId: true, userId: true, vendorId: true, deliveryPrice: true },
+      });
+      if (!order) throw new Error('Order not found or not assignable');
+
+      const newCaptain = await tx.captain.findUnique({
+        where: { id_tenantId: { id: BigInt(captainId), tenantId } },
+        select: { currentNumberOfOrders: true, maxCurrentOrders: true, userName: true, isLocked: true },
+      });
+      if (!newCaptain) throw new Error('Captain not found');
+      if (newCaptain.isLocked) throw new Error('Captain is locked');
+      if (newCaptain.currentNumberOfOrders >= newCaptain.maxCurrentOrders) {
+        throw new Error('Captain has reached maximum order capacity');
+      }
+
+      // If order already had a captain, decrement their count
+      if (order.captainId) {
+        await tx.captain.update({
+          where: { id_tenantId: { id: order.captainId, tenantId } },
+          data: { currentNumberOfOrders: { decrement: 1 } },
+        });
+        const oldCaptain = await tx.captain.findUnique({
+          where: { id_tenantId: { id: order.captainId, tenantId } },
+          select: { currentNumberOfOrders: true },
+        });
+        updateCaptainOrderCountsInCache(
+          order.captainId.toString(),
+          tenantId,
+          { currentNumberOfOrders: Math.max(0, oldCaptain.currentNumberOfOrders) }
+        );
+      }
+
+      // Assign new captain
+      await tx.captain.update({
+        where: { id_tenantId: { id: BigInt(captainId), tenantId } },
+        data: { currentNumberOfOrders: { increment: 1 } },
+      });
+      updateCaptainOrderCountsInCache(
+        captainId.toString(),
+        tenantId,
+        { currentNumberOfOrders: newCaptain.currentNumberOfOrders + 1 }
+      );
+
+      const updated = await tx.order.update({
+        where: { id_tenantId: { id: BigInt(orderId), tenantId } },
+        data: { captainId: BigInt(captainId), status: 'ACCEPTED_BY_CAPTAIN', acceptedByCapta: new Date() },
+      });
+
+      // Notify new captain and user
+      setImmediate(async () => {
+        try {
+          await Promise.all([
+            notificationService.sendToCaptain(
+              captainId,
+              'تم تعيينك لطلب',
+              `تم تعيينك لطلب رقم ${orderId} من قِبل الإدارة.`,
+              tenantId,
+              { orderId: orderId.toString(), type: 'CAPTAIN_ASSIGNED' }
+            ),
+            order.userId ? notificationService.sendToUser(
+              order.userId,
+              'تم تعيين كابتن',
+              'تم تعيين كابتن جديد لطلبك وهو في الطريق إليك.',
+              tenantId,
+              { orderId: orderId.toString(), type: 'CAPTAIN_ASSIGNED' }
+            ) : Promise.resolve(),
+          ]);
+        } catch (e) { console.error('assignCaptain notify error:', e); }
+      });
+
+      return convertBigIntToString(updated);
+    });
   }
 }
 

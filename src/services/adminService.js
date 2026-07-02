@@ -1516,6 +1516,24 @@ class AdminService {
       throw new Error('Invalid refresh token');
     }
   }
+
+  async deleteUser(id, tenantId) {
+    const user = await prisma.user.findFirst({ where: { id: BigInt(id), tenantId } });
+    if (!user) throw new Error('User not found');
+    await prisma.user.delete({ where: { id_tenantId: { id: BigInt(id), tenantId } } });
+  }
+
+  async deleteCaptain(id, tenantId) {
+    const captain = await prisma.captain.findFirst({ where: { id: BigInt(id), tenantId } });
+    if (!captain) throw new Error('Captain not found');
+    await prisma.captain.delete({ where: { id_tenantId: { id: BigInt(id), tenantId } } });
+  }
+
+  async deleteVendor(id, tenantId) {
+    const vendor = await prisma.vendor.findFirst({ where: { id: BigInt(id), tenantId } });
+    if (!vendor) throw new Error('Vendor not found');
+    await prisma.vendor.delete({ where: { id_tenantId: { id: BigInt(id), tenantId } } });
+  }
 }
 
 module.exports = new AdminService();
