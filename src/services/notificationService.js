@@ -524,17 +524,24 @@ class NotificationService {
         select: { fcmToken: true },
       });
       const tokens = users.map(u => u.fcmToken).filter(Boolean);
-      if (tokens.length === 0) return false;
+      console.log(`[FCM] Sending announcement to ${tokens.length} users (tenant: ${tenantId})`);
+      if (tokens.length === 0) {
+        console.log('[FCM] No user tokens found, skipping.');
+        return false;
+      }
       const BATCH_SIZE = 500;
       let success = false;
       for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
         const batch = tokens.slice(i, i + BATCH_SIZE);
+        console.log(`[FCM] Sending user batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} tokens`);
         const result = await this.sendMulticastNotification(batch, title, body, { ...data, userType: 'USER' });
+        console.log(`[FCM] User batch result: ${result ? 'success' : 'failed'}`);
         if (result) success = true;
       }
+      console.log(`[FCM] sendToAllUsers done. Overall success: ${success}`);
       return success;
     } catch (error) {
-      console.error('Error sending notification to all users:', error);
+      console.error('[FCM] Error sending notification to all users:', error);
       return false;
     }
   }
@@ -547,17 +554,24 @@ class NotificationService {
         select: { fcmToken: true },
       });
       const tokens = captains.map(c => c.fcmToken).filter(Boolean);
-      if (tokens.length === 0) return false;
+      console.log(`[FCM] Sending announcement to ${tokens.length} captains (tenant: ${tenantId})`);
+      if (tokens.length === 0) {
+        console.log('[FCM] No captain tokens found, skipping.');
+        return false;
+      }
       const BATCH_SIZE = 500;
       let success = false;
       for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
         const batch = tokens.slice(i, i + BATCH_SIZE);
+        console.log(`[FCM] Sending captain batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} tokens`);
         const result = await this.sendMulticastNotification(batch, title, body, { ...data, userType: 'CAPTAIN' });
+        console.log(`[FCM] Captain batch result: ${result ? 'success' : 'failed'}`);
         if (result) success = true;
       }
+      console.log(`[FCM] sendToAllCaptains done. Overall success: ${success}`);
       return success;
     } catch (error) {
-      console.error('Error sending notification to all captains:', error);
+      console.error('[FCM] Error sending notification to all captains:', error);
       return false;
     }
   }
