@@ -375,11 +375,18 @@ class AdminService {
   }
 
   // Get all captains for admin management (no pagination, sorted by rating)
-  async getAllCaptains(tenantId, isLocked = null) {
-    const whereClause = { tenantId };
-    if (isLocked !== null) {
-      whereClause.isLocked = isLocked;
-    }
+  async getAllCaptains(tenantId, isLocked = null, search = null) {
+    const whereClause = {
+      tenantId,
+      ...(isLocked !== null ? { isLocked } : {}),
+      ...(search ? {
+        OR: [
+          { userName: { contains: search, mode: 'insensitive' } },
+          { phoneNumber: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+        ]
+      } : {}),
+    };
 
     const captains = await prisma.captain.findMany({
       where: whereClause,
@@ -660,12 +667,22 @@ class AdminService {
   }
 
   // Get all users for admin management
-  async getAllUsers(tenantId, page = 1, limit = 10) {
+  async getAllUsers(tenantId, page = 1, limit = 10, search = null) {
     const skip = (page - 1) * limit;
+    const where = {
+      tenantId,
+      ...(search ? {
+        OR: [
+          { userName: { contains: search, mode: 'insensitive' } },
+          { phoneNumber: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+        ]
+      } : {}),
+    };
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
-        where: { tenantId },
+        where,
         select: {
           id: true,
           userName: true,
@@ -684,7 +701,7 @@ class AdminService {
         skip,
         take: parseInt(limit)
       }),
-      prisma.user.count({ where: { tenantId } })
+      prisma.user.count({ where })
     ]);
 
     return {

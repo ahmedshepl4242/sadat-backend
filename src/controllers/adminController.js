@@ -62,8 +62,8 @@ class AdminController {
   // Get all captains for admin management
   async getAllCaptains(req, res) {
     try {
-      const { isLocked } = req.query;
-      const result = await adminService.getAllCaptains(req.tenant.id, isLocked === 'true' ? true : isLocked === 'false' ? false : null);
+      const { isLocked, search } = req.query;
+      const result = await adminService.getAllCaptains(req.tenant.id, isLocked === 'true' ? true : isLocked === 'false' ? false : null, search);
       return successResponse(res, result, 'Captains retrieved successfully');
     } catch (error) {
       return errorResponse(res, error.message, 400);
@@ -108,8 +108,8 @@ class AdminController {
   // Get all users for admin management
   async getAllUsers(req, res) {
     try {
-      const { page, limit } = req.query;
-      const result = await adminService.getAllUsers(req.tenant.id, page, limit);
+      const { page, limit, search } = req.query;
+      const result = await adminService.getAllUsers(req.tenant.id, page, limit, search);
       return successResponse(res, result, 'Users retrieved successfully');
     } catch (error) {
       return errorResponse(res, error.message, 400);
