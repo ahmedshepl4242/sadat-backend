@@ -97,7 +97,11 @@ class AnnouncementService {
     });
 
     const serialized = this._serialize(updated);
-    const notifData = { type: 'ANNOUNCEMENT', announcementId: serialized.id };
+    const notifData = {
+      type: 'ANNOUNCEMENT',
+      announcementId: serialized.id,
+      ...(existing.imageUrl ? { imageUrl: existing.imageUrl } : {}),
+    };
     const hasTargetedUsers = Array.isArray(userIds) && userIds.length > 0;
     const hasTargetedCaptains = Array.isArray(captainIds) && captainIds.length > 0;
 

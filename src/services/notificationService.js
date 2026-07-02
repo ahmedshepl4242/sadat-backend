@@ -68,15 +68,26 @@ class NotificationService {
     }
 
     try {
+      const imageUrl = data.imageUrl || null;
       const message = {
         notification: {
           title,
           body,
+          ...(imageUrl ? { imageUrl } : {}),
         },
         data: {
           ...data,
           timestamp: new Date().toISOString(),
         },
+        android: {
+          notification: {
+            imageUrl: imageUrl || undefined,
+          },
+        },
+        apns: imageUrl ? {
+          payload: { aps: { 'mutable-content': 1 } },
+          fcmOptions: { imageUrl },
+        } : undefined,
         tokens: tokens.filter(token => token), // Filter out null/undefined tokens
       };
 
