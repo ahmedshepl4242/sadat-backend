@@ -3,7 +3,16 @@ const notificationService = require('./notificationService');
 
 class AnnouncementService {
   _serialize(a) {
-    return { ...a, id: a.id.toString() };
+    return {
+      id: a.id.toString(),
+      tenant_id: a.tenantId,
+      title: a.title,
+      body: a.body,
+      image_url: a.imageUrl ?? null,
+      is_published: a.isPublished,
+      published_at: a.publishedAt ? a.publishedAt.toISOString() : null,
+      created_at: a.createdAt.toISOString(),
+    };
   }
 
   async getAll(tenantId, page = 1, limit = 10) {
