@@ -11,6 +11,9 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 firebase.json
+src/config/firebase.json
+src/config/*.json
+
 
 # Logs
 logs
