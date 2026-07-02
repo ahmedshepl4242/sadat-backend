@@ -102,20 +102,22 @@ class AnnouncementService {
       announcementId: serialized.id,
       ...(existing.imageUrl ? { imageUrl: existing.imageUrl } : {}),
     };
-    const hasTargetedUsers = Array.isArray(userIds) && userIds.length > 0;
-    const hasTargetedCaptains = Array.isArray(captainIds) && captainIds.length > 0;
+    // userIds/captainIds: null = all, [] = skip, [ids] = specific
+    const skipUsers = Array.isArray(userIds) && userIds.length === 0;
+    const skipCaptains = Array.isArray(captainIds) && captainIds.length === 0;
 
-    // Fire-and-forget notifications
-    if (hasTargetedUsers) {
-      notificationService.sendToSpecificUsers(existing.title, existing.body, notifData, tenantId, userIds).catch(console.error);
-    } else {
-      notificationService.sendToAllUsers(existing.title, existing.body, notifData, tenantId).catch(console.error);
+    if (!skipUsers) {
+      const send = Array.isArray(userIds) && userIds.length > 0
+        ? notificationService.sendToSpecificUsers(existing.title, existing.body, notifData, tenantId, userIds)
+        : notificationService.sendToAllUsers(existing.title, existing.body, notifData, tenantId);
+      send.catch(console.error);
     }
 
-    if (hasTargetedCaptains) {
-      notificationService.sendToSpecificCaptains(existing.title, existing.body, notifData, tenantId, captainIds).catch(console.error);
-    } else {
-      notificationService.sendToAllCaptains(existing.title, existing.body, notifData, tenantId).catch(console.error);
+    if (!skipCaptains) {
+      const send = Array.isArray(captainIds) && captainIds.length > 0
+        ? notificationService.sendToSpecificCaptains(existing.title, existing.body, notifData, tenantId, captainIds)
+        : notificationService.sendToAllCaptains(existing.title, existing.body, notifData, tenantId);
+      send.catch(console.error);
     }
 
     return serialized;
