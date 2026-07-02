@@ -4,6 +4,7 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 const { successResponse, errorResponse } = require('../utils/helpers');
 const announcementService = require('../services/announcementService');
+const wasabiService = require('../services/wasabiService');
 const { protectAdmin } = require('../middlewares/auth');
 
 // Admin: list all (published + drafts)
@@ -22,7 +23,20 @@ router.post('/', protectAdmin, upload.single('image'), async (req, res) => {
   try {
     const { title, body } = req.body;
     if (!title || !body) return errorResponse(res, 'title and body are required', 400);
-    const imageUrl = req.file?.location || null;
+    let imageUrl = null;
+    if (req.file) {
+      const ext = req.file.originalname.split('.').pop() || 'jpg';
+      const key = wasabiService.generateFileName('announcements', ext);
+      await wasabiService.s3.upload({
+        Bucket: wasabiService.bucketName,
+        Key: key,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+        ACL: 'public-read',
+      }).promise();
+      const endpoint = (process.env.WASABI_ENDPOINT || 'https://s3.wasabisys.com').replace(/\/$/, '');
+      imageUrl = `${endpoint}/${wasabiService.bucketName}/${key}`;
+    }
     const result = await announcementService.create(req.tenant.id, { title, body, imageUrl });
     return successResponse(res, result, 'Announcement created successfully');
   } catch (error) {
@@ -34,7 +48,20 @@ router.post('/', protectAdmin, upload.single('image'), async (req, res) => {
 router.put('/:id', protectAdmin, upload.single('image'), async (req, res) => {
   try {
     const { title, body } = req.body;
-    const imageUrl = req.file?.location;
+    let imageUrl;
+    if (req.file) {
+      const ext = req.file.originalname.split('.').pop() || 'jpg';
+      const key = wasabiService.generateFileName('announcements', ext);
+      await wasabiService.s3.upload({
+        Bucket: wasabiService.bucketName,
+        Key: key,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+        ACL: 'public-read',
+      }).promise();
+      const endpoint = (process.env.WASABI_ENDPOINT || 'https://s3.wasabisys.com').replace(/\/$/, '');
+      imageUrl = `${endpoint}/${wasabiService.bucketName}/${key}`;
+    }
     const result = await announcementService.update(req.params.id, req.tenant.id, { title, body, imageUrl });
     return successResponse(res, result, 'Announcement updated successfully');
   } catch (error) {
