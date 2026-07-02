@@ -84,7 +84,7 @@ class AnnouncementService {
     });
   }
 
-  async publish(id, tenantId) {
+  async publish(id, tenantId, { userIds, captainIds } = {}) {
     const existing = await prisma.announcement.findFirst({
       where: { id: BigInt(id), tenantId },
     });
@@ -98,12 +98,21 @@ class AnnouncementService {
 
     const serialized = this._serialize(updated);
     const notifData = { type: 'ANNOUNCEMENT', announcementId: serialized.id };
+    const hasTargetedUsers = Array.isArray(userIds) && userIds.length > 0;
+    const hasTargetedCaptains = Array.isArray(captainIds) && captainIds.length > 0;
 
-    // Fire-and-forget
-    Promise.allSettled([
-      notificationService.sendToAllUsers(existing.title, existing.body, notifData, tenantId),
-      notificationService.sendToAllCaptains(existing.title, existing.body, notifData, tenantId),
-    ]).catch(console.error);
+    // Fire-and-forget notifications
+    if (hasTargetedUsers) {
+      notificationService.sendToSpecificUsers(existing.title, existing.body, notifData, tenantId, userIds).catch(console.error);
+    } else {
+      notificationService.sendToAllUsers(existing.title, existing.body, notifData, tenantId).catch(console.error);
+    }
+
+    if (hasTargetedCaptains) {
+      notificationService.sendToSpecificCaptains(existing.title, existing.body, notifData, tenantId, captainIds).catch(console.error);
+    } else {
+      notificationService.sendToAllCaptains(existing.title, existing.body, notifData, tenantId).catch(console.error);
+    }
 
     return serialized;
   }

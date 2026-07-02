@@ -52,10 +52,11 @@ router.delete('/:id', protectAdmin, async (req, res) => {
   }
 });
 
-// Admin: publish + send FCM to all users & captains
+// Admin: publish + send FCM (optional targeted recipients)
 router.post('/:id/publish', protectAdmin, async (req, res) => {
   try {
-    const result = await announcementService.publish(req.params.id, req.tenant.id);
+    const { userIds, captainIds } = req.body;
+    const result = await announcementService.publish(req.params.id, req.tenant.id, { userIds, captainIds });
     return successResponse(res, result, 'Announcement published and notifications sent');
   } catch (error) {
     return errorResponse(res, error.message, 400);

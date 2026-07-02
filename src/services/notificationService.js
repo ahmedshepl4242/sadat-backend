@@ -546,6 +546,54 @@ class NotificationService {
     }
   }
 
+  // Send announcement to SPECIFIC users by id
+  async sendToSpecificUsers(title, body, data = {}, tenantId, userIds) {
+    try {
+      const users = await prisma.user.findMany({
+        where: { tenantId, id: { in: userIds.map(BigInt) }, fcmToken: { not: null } },
+        select: { fcmToken: true },
+      });
+      const tokens = users.map(u => u.fcmToken).filter(Boolean);
+      console.log(`[FCM] Sending to ${tokens.length} specific users`);
+      if (tokens.length === 0) return false;
+      const BATCH_SIZE = 500;
+      let success = false;
+      for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
+        const batch = tokens.slice(i, i + BATCH_SIZE);
+        const result = await this.sendMulticastNotification(batch, title, body, { ...data, userType: 'USER' });
+        if (result) success = true;
+      }
+      return success;
+    } catch (error) {
+      console.error('[FCM] Error sending to specific users:', error);
+      return false;
+    }
+  }
+
+  // Send announcement to SPECIFIC captains by id
+  async sendToSpecificCaptains(title, body, data = {}, tenantId, captainIds) {
+    try {
+      const captains = await prisma.captain.findMany({
+        where: { tenantId, id: { in: captainIds.map(BigInt) }, fcmToken: { not: null } },
+        select: { fcmToken: true },
+      });
+      const tokens = captains.map(c => c.fcmToken).filter(Boolean);
+      console.log(`[FCM] Sending to ${tokens.length} specific captains`);
+      if (tokens.length === 0) return false;
+      const BATCH_SIZE = 500;
+      let success = false;
+      for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
+        const batch = tokens.slice(i, i + BATCH_SIZE);
+        const result = await this.sendMulticastNotification(batch, title, body, { ...data, userType: 'CAPTAIN' });
+        if (result) success = true;
+      }
+      return success;
+    } catch (error) {
+      console.error('[FCM] Error sending to specific captains:', error);
+      return false;
+    }
+  }
+
   // Broadcast announcement to ALL captains of a tenant
   async sendToAllCaptains(title, body, data = {}, tenantId) {
     try {
