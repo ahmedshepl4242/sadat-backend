@@ -3,11 +3,14 @@ require('dotenv').config();
 
 class WasabiService {
   constructor() {
+    const region = process.env.WASABI_REGION || 'us-east-1';
+    // Use the regional endpoint directly to avoid redirect + presigned URL signature mismatch
+    const endpoint = `https://s3.${region}.wasabisys.com`;
     this.s3 = new AWS.S3({
       accessKeyId: process.env.WASABI_ACCESS_KEY,
       secretAccessKey: process.env.WASABI_SECRET_KEY,
-      endpoint: process.env.WASABI_ENDPOINT,
-      region: process.env.WASABI_REGION,
+      endpoint,
+      region,
       s3ForcePathStyle: true
     });
     this.bucketName = process.env.WASABI_BUCKET_NAME;

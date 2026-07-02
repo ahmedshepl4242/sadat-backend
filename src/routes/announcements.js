@@ -32,10 +32,8 @@ router.post('/', protectAdmin, upload.single('image'), async (req, res) => {
         Key: key,
         Body: req.file.buffer,
         ContentType: req.file.mimetype,
-        ACL: 'public-read',
       }).promise();
-      const endpoint = (process.env.WASABI_ENDPOINT || 'https://s3.wasabisys.com').replace(/\/$/, '');
-      imageUrl = `${endpoint}/${wasabiService.bucketName}/${key}`;
+      imageUrl = wasabiService.generatePreSignedUrl(key, 7 * 24 * 3600);
     }
     const result = await announcementService.create(req.tenant.id, { title, body, imageUrl });
     return successResponse(res, result, 'Announcement created successfully');
@@ -57,10 +55,8 @@ router.put('/:id', protectAdmin, upload.single('image'), async (req, res) => {
         Key: key,
         Body: req.file.buffer,
         ContentType: req.file.mimetype,
-        ACL: 'public-read',
       }).promise();
-      const endpoint = (process.env.WASABI_ENDPOINT || 'https://s3.wasabisys.com').replace(/\/$/, '');
-      imageUrl = `${endpoint}/${wasabiService.bucketName}/${key}`;
+      imageUrl = wasabiService.generatePreSignedUrl(key, 7 * 24 * 3600);
     }
     const result = await announcementService.update(req.params.id, req.tenant.id, { title, body, imageUrl });
     return successResponse(res, result, 'Announcement updated successfully');
