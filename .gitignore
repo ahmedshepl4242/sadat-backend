@@ -13,7 +13,7 @@ yarn-error.log*
 firebase.json
 src/config/firebase.json
 src/config/*.json
-
+firebase.json
 
 # Logs
 logs
