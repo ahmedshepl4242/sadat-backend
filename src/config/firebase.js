@@ -17,6 +17,10 @@ const initializeFirebase = () => {
       let serviceAccount;
       try {
         serviceAccount = JSON.parse(serviceAccountPath);
+        // Fix private key newlines when loaded from env variable
+        if (serviceAccount.private_key) {
+          serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+        }
       } catch (parseError) {
         // If parsing fails, treat as file path
         serviceAccount = require(serviceAccountPath);
