@@ -1336,9 +1336,10 @@ class OrderService {
     // Build where clause
     const whereClause = { tenantId };
 
-    // Add status filter if provided
+    // Add status filter if provided (supports comma-separated multiple statuses)
     if (status) {
-      whereClause.status = status;
+      const statuses = status.split(',').map(s => s.trim()).filter(Boolean);
+      whereClause.status = statuses.length === 1 ? statuses[0] : { in: statuses };
     }
 
     // Add date range filter if provided
