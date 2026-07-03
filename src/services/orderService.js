@@ -1425,8 +1425,7 @@ class OrderService {
       where: {
         id: BigInt(orderId),
         tenantId,
-        vendorId: BigInt(-1), // Only special orders
-        status: 'ACCEPTED_BY_CAPTAIN'
+        status: { notIn: ['DELIVERED', 'CANCELLED', 'REJECTED_BY_VENDOR'] }
       },
       include: {
         user: {
@@ -1445,7 +1444,7 @@ class OrderService {
     });
 
     if (!order) {
-      throw new Error('Special order not found or not in the correct status');
+      throw new Error('Order not found or cannot be modified (already delivered/cancelled)');
     }
 
     const oldDeliveryPrice = order.deliveryPrice;
