@@ -54,6 +54,17 @@ class NeighborhoodController {
       return errorResponse(res, error.message, 400);
     }
   }
+
+  // Reorder neighborhoods (admin endpoint)
+  async reorderNeighborhoods(req, res) {
+    try {
+      const { orderedIds } = req.body;
+      const result = await neighborhoodService.reorderNeighborhoods(orderedIds, req.tenant.id);
+      return successResponse(res, result, 'Neighborhoods reordered successfully');
+    } catch (error) {
+      return errorResponse(res, error.message, 400);
+    }
+  }
 }
 
 module.exports = new NeighborhoodController(); 

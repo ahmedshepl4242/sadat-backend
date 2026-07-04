@@ -2091,6 +2091,33 @@ router.delete('/categories/:id', protectAdmin, categoryController.deleteCategory
 
 /**
  * @swagger
+ * /api/admin/categories/reorder:
+ *   put:
+ *     summary: Reorder categories (Admin only)
+ *     tags: [Admin - Categories]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - orderedIds
+ *             properties:
+ *               orderedIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Categories reordered successfully
+ */
+router.put('/categories/reorder', protectAdmin, categoryController.reorderCategories);
+
+/**
+ * @swagger
  * /api/admin/orders:
  *   get:
  *     summary: Get all orders with filters (Admin only)

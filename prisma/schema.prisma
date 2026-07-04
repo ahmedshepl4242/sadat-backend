@@ -128,9 +128,10 @@ model Item {
 }
 
 model Category {
-  id       BigInt   @default(autoincrement())
-  tenantId String   @map("tenant_id")
-  name     String
+  id        BigInt   @default(autoincrement())
+  tenantId  String   @map("tenant_id")
+  name      String
+  sortOrder Int      @default(0) @map("sort_order")
 
   // Relations
   vendorCategories VendorCategory[]
@@ -279,6 +280,7 @@ model Neighborhood {
   id          BigInt   @default(autoincrement())
   tenantId    String   @map("tenant_id")
   name        String
+  sortOrder   Int      @default(0) @map("sort_order")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

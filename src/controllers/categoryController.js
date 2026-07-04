@@ -55,6 +55,17 @@ class CategoryController {
     }
   }
 
+  // Reorder categories (admin endpoint)
+  async reorderCategories(req, res) {
+    try {
+      const { orderedIds } = req.body;
+      const result = await categoryService.reorderCategories(orderedIds, req.tenant.id);
+      return successResponse(res, result, 'Categories reordered successfully');
+    } catch (error) {
+      return errorResponse(res, error.message, 400);
+    }
+  }
+
   // Get vendor registration data (neighborhoods and categories)
   async getVendorRegistrationData(req, res) {
     try {
