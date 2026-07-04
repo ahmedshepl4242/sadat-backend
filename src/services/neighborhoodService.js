@@ -20,16 +20,10 @@ class NeighborhoodService {
       throw new Error('Neighborhood with this name already exists');
     }
 
-    const maxOrder = await prisma.neighborhood.aggregate({
-      where: { tenantId },
-      _max: { sortOrder: true }
-    });
-
     const neighborhood = await prisma.neighborhood.create({
       data: {
         name,
-        tenantId,
-        sortOrder: (maxOrder._max.sortOrder ?? -1) + 1
+        tenantId
       }
     });
 
@@ -40,26 +34,12 @@ class NeighborhoodService {
   async getAllNeighborhoods(tenantId) {
     const neighborhoods = await prisma.neighborhood.findMany({
       where: { tenantId },
-      orderBy: { sortOrder: 'asc' }
+      orderBy: { name: 'asc' }
     });
 
     return {
       neighborhoods: convertBigIntToString(neighborhoods)
     };
-  }
-
-  // Reorder neighborhoods
-  async reorderNeighborhoods(orderedIds, tenantId) {
-    await prisma.$transaction(
-      orderedIds.map((id, index) =>
-        prisma.neighborhood.update({
-          where: { id_tenantId: { id: BigInt(id), tenantId } },
-          data: { sortOrder: index }
-        })
-      )
-    );
-
-    return this.getAllNeighborhoods(tenantId);
   }
 
   // Get neighborhood by ID

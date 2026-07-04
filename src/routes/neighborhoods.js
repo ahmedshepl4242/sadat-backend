@@ -203,33 +203,4 @@ router.put('/:id', protectAdmin, neighborhoodValidation.idParam, neighborhoodVal
  */
 router.delete('/:id', protectAdmin, neighborhoodValidation.idParam, neighborhoodController.deleteNeighborhood);
 
-/**
- * @swagger
- * /api/neighborhoods/reorder:
- *   put:
- *     summary: Reorder neighborhoods (Admin only)
- *     tags: [Neighborhoods]
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - $ref: '#/components/parameters/TenantId'
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - orderedIds
- *             properties:
- *               orderedIds:
- *                 type: array
- *                 items:
- *                   type: string
- *     responses:
- *       200:
- *         description: Neighborhoods reordered successfully
- */
-router.put('/reorder', protectAdmin, neighborhoodController.reorderNeighborhoods);
-
-module.exports = router;
+module.exports = router; 

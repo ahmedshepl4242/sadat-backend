@@ -20,16 +20,10 @@ class CategoryService {
       throw new Error('Category with this name already exists');
     }
 
-    const maxOrder = await prisma.category.aggregate({
-      where: { tenantId },
-      _max: { sortOrder: true }
-    });
-
     const category = await prisma.category.create({
       data: {
         name,
-        tenantId,
-        sortOrder: (maxOrder._max.sortOrder ?? -1) + 1
+        tenantId
       }
     });
 
@@ -40,26 +34,12 @@ class CategoryService {
   async getAllCategories(tenantId) {
     const categories = await prisma.category.findMany({
       where: { tenantId },
-      orderBy: { sortOrder: 'asc' }
+      orderBy: { name: 'asc' }
     });
 
     return {
       categories: convertBigIntToString(categories)
     };
-  }
-
-  // Reorder categories
-  async reorderCategories(orderedIds, tenantId) {
-    await prisma.$transaction(
-      orderedIds.map((id, index) =>
-        prisma.category.update({
-          where: { id_tenantId: { id: BigInt(id), tenantId } },
-          data: { sortOrder: index }
-        })
-      )
-    );
-
-    return this.getAllCategories(tenantId);
   }
 
   // Get category by ID
