@@ -1567,7 +1567,7 @@ class OrderService {
         where: {
           id: BigInt(orderId),
           tenantId,
-          status: { in: ['COUNTER_OFFER_ACCEPTED', 'ACCEPTED_BY_CAPTAIN'] },
+          status: { in: ['PENDING', 'COUNTER_OFFER_ACCEPTED', 'ACCEPTED_BY_CAPTAIN'] },
         },
         select: { id: true, captainId: true, userId: true, vendorId: true, deliveryPrice: true },
       });
