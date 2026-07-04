@@ -41,7 +41,7 @@ class OrderService {
     const order = await prisma.order.create({
       data: {
         tenantId,
-        userId: BigInt(userId),
+        userId: userId ? BigInt(userId) : null,
         vendorId: BigInt(-1),
         neighborhoodId: neighborhoodId ? BigInt(neighborhoodId) : null,
         status: 'COUNTER_OFFER_ACCEPTED',

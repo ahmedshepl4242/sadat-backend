@@ -404,16 +404,18 @@ class AdminController {
     try {
       const { userId, description, additionalNotes, phoneNumber, neighborhoodId } = req.body;
 
-      if (!userId || !description || !phoneNumber || !neighborhoodId) {
-        return errorResponse(res, 'userId, description, phoneNumber, and neighborhoodId are required', 400);
+      if (!description || !phoneNumber || !neighborhoodId) {
+        return errorResponse(res, 'description, phoneNumber, and neighborhoodId are required', 400);
       }
 
-      const user = await prisma.user.findFirst({
-        where: { id: BigInt(userId), tenantId: req.tenant.id },
-        select: { id: true },
-      });
-      if (!user) {
-        return errorResponse(res, 'User not found', 404);
+      if (userId) {
+        const user = await prisma.user.findFirst({
+          where: { id: BigInt(userId), tenantId: req.tenant.id },
+          select: { id: true },
+        });
+        if (!user) {
+          return errorResponse(res, 'User not found', 404);
+        }
       }
 
       const orderData = {
