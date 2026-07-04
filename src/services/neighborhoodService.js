@@ -31,27 +31,14 @@ class NeighborhoodService {
   }
 
   // Get all neighborhoods
-  async getAllNeighborhoods(tenantId, page = 1, limit = 10) {
-    const skip = (page - 1) * limit;
-
-    const [neighborhoods, total] = await Promise.all([
-      prisma.neighborhood.findMany({
-        where: { tenantId },
-        orderBy: { name: 'asc' },
-        skip,
-        take: parseInt(limit)
-      }),
-      prisma.neighborhood.count({ where: { tenantId } })
-    ]);
+  async getAllNeighborhoods(tenantId) {
+    const neighborhoods = await prisma.neighborhood.findMany({
+      where: { tenantId },
+      orderBy: { name: 'asc' }
+    });
 
     return {
-      neighborhoods: convertBigIntToString(neighborhoods),
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit)
-      }
+      neighborhoods: convertBigIntToString(neighborhoods)
     };
   }
 

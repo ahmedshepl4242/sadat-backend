@@ -15,8 +15,7 @@ class NeighborhoodController {
   // Get all neighborhoods (public endpoint)
   async getAllNeighborhoods(req, res) {
     try {
-      const { page, limit } = req.query;
-      const result = await neighborhoodService.getAllNeighborhoods(req.tenant.id, page, limit);
+      const result = await neighborhoodService.getAllNeighborhoods(req.tenant.id);
       return successResponse(res, result, 'Neighborhoods retrieved successfully');
     } catch (error) {
       return errorResponse(res, error.message, 400);

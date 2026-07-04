@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const neighborhoodController = require('../controllers/neighborhoodController');
 const { protectAdmin } = require('../middlewares/auth');
-const { neighborhoodValidation, paginationValidation } = require('../utils/validation');
+const { neighborhoodValidation } = require('../utils/validation');
 
 /**
  * @swagger
@@ -12,21 +12,6 @@ const { neighborhoodValidation, paginationValidation } = require('../utils/valid
  *     tags: [Neighborhoods]
  *     parameters:
  *       - $ref: '#/components/parameters/TenantId'
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 100
- *           default: 10
- *         description: Number of items per page
  *     responses:
  *       200:
  *         description: Neighborhoods retrieved successfully
@@ -45,22 +30,11 @@ const { neighborhoodValidation, paginationValidation } = require('../utils/valid
  *                       type: array
  *                       items:
  *                         $ref: '#/components/schemas/Neighborhood'
- *                     pagination:
- *                       type: object
- *                       properties:
- *                         page:
- *                           type: integer
- *                         limit:
- *                           type: integer
- *                         total:
- *                           type: integer
- *                         pages:
- *                           type: integer
  *                 message:
  *                   type: string
  *                   example: Neighborhoods retrieved successfully
  */
-router.get('/', paginationValidation, neighborhoodController.getAllNeighborhoods);
+router.get('/', neighborhoodController.getAllNeighborhoods);
 
 /**
  * @swagger
