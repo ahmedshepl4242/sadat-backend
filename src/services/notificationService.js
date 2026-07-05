@@ -24,6 +24,12 @@ class NotificationService {
     this.messaging = getMessaging();
   }
 
+  // FCM error codes that mean the token is dead and should be removed
+  static STALE_TOKEN_ERROR_CODES = [
+    'messaging/registration-token-not-registered',
+    'messaging/invalid-registration-token',
+  ];
+
   // Send notification to a single token
   async sendNotification(token, title, body, data = {}) {
     if (!this.messaging || !token) {
@@ -55,8 +61,27 @@ class NotificationService {
       console.log('Successfully sent message:', response);
       return true;
     } catch (error) {
-      console.error('Error sending message:', error);
+      if (NotificationService.STALE_TOKEN_ERROR_CODES.includes(error.code)) {
+        console.log(`Stale FCM token detected, clearing: ${token}`);
+        await this.clearStaleToken(token);
+      } else {
+        console.error('Error sending message:', error);
+      }
       return false;
+    }
+  }
+
+  // Remove a dead FCM token from whichever entity (user/vendor/captain/tenant) owns it
+  async clearStaleToken(token) {
+    try {
+      await Promise.all([
+        prisma.user.updateMany({ where: { fcmToken: token }, data: { fcmToken: null } }),
+        prisma.vendor.updateMany({ where: { fcmToken: token }, data: { fcmToken: null } }),
+        prisma.captain.updateMany({ where: { fcmToken: token }, data: { fcmToken: null } }),
+        prisma.tenant.updateMany({ where: { fcmToken: token }, data: { fcmToken: null } }),
+      ]);
+    } catch (error) {
+      console.error('Error clearing stale FCM token:', error);
     }
   }
 
@@ -102,11 +127,19 @@ class NotificationService {
       // Handle partial failures
       if (response.failureCount > 0) {
         console.warn(`${response.failureCount} messages failed to send out of ${response.responses.length}`);
+        const staleTokens = [];
         response.responses.forEach((resp, idx) => {
           if (!resp.success) {
             console.error(`Failed to send to token ${idx}:`, resp.error);
+            if (NotificationService.STALE_TOKEN_ERROR_CODES.includes(resp.error?.code)) {
+              staleTokens.push(message.tokens[idx]);
+            }
           }
         });
+        if (staleTokens.length > 0) {
+          console.log(`Clearing ${staleTokens.length} stale FCM token(s)`);
+          await Promise.all(staleTokens.map(token => this.clearStaleToken(token)));
+        }
       }
 
       return response.successCount > 0;
