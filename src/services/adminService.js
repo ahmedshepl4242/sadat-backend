@@ -437,7 +437,7 @@ class AdminService {
   }
 
   // Get all vendors for admin management
-  async getAllVendors(tenantId, page = 1, limit = 10, isLocked = null, category = null) {
+  async getAllVendors(tenantId, page = 1, limit = 10, isLocked = null, category = null, search = null) {
     const skip = (page - 1) * limit;
 
     const whereClause = { tenantId };
@@ -453,6 +453,13 @@ class AdminService {
           tenantId
         }
       };
+    }
+
+    if (search) {
+      whereClause.OR = [
+        { vendorName: { contains: search, mode: 'insensitive' } },
+        { contactNumber: { contains: search, mode: 'insensitive' } },
+      ];
     }
 
     const [vendors, total] = await Promise.all([

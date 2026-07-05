@@ -73,9 +73,9 @@ class AdminController {
   // Get all vendors for admin management
   async getAllVendors(req, res) {
     try {
-      const { page, limit, isLocked, category } = req.query;
+      const { page, limit, isLocked, category, search } = req.query;
       const tenantId = req.tenant.id;
-      const result = await adminService.getAllVendors(tenantId, page, limit, isLocked === 'true' ? true : isLocked === 'false' ? false : null, category);
+      const result = await adminService.getAllVendors(tenantId, page, limit, isLocked === 'true' ? true : isLocked === 'false' ? false : null, category, search);
       return successResponse(res, result, 'Vendors retrieved successfully');
     } catch (error) {
       return errorResponse(res, error.message, 400);
@@ -399,10 +399,10 @@ class AdminController {
     }
   }
 
-  // Create a special order on behalf of a user (admin only)
+  // Create an order on behalf of a user (admin only) - optionally for a specific vendor
   async createOrderForUser(req, res) {
     try {
-      const { userId, description, additionalNotes, phoneNumber, neighborhoodId } = req.body;
+      const { userId, vendorId, description, additionalNotes, phoneNumber, neighborhoodId, attachments } = req.body;
 
       if (!description || !phoneNumber || !neighborhoodId) {
         return errorResponse(res, 'description, phoneNumber, and neighborhoodId are required', 400);
@@ -418,8 +418,10 @@ class AdminController {
         }
       }
 
+      const hasVendor = vendorId && vendorId !== '-1' && vendorId !== -1;
+
       const orderData = {
-        vendorId: '-1',
+        vendorId: hasVendor ? vendorId : '-1',
         description,
         additionalNotes: additionalNotes || '',
         userAddress: '',
@@ -427,9 +429,12 @@ class AdminController {
         userLatitude: 0,
         phoneNumber,
         neighborhoodId,
+        attachments,
       };
 
-      const result = await orderService.createSpecialOrder(userId, orderData, req.tenant.id);
+      const result = hasVendor
+        ? await orderService.createAdminOrderForVendor(userId, orderData, req.tenant.id)
+        : await orderService.createSpecialOrder(userId, orderData, req.tenant.id);
       return successResponse(res, result, 'Order created successfully', 201);
     } catch (error) {
       return errorResponse(res, error.message, 400);

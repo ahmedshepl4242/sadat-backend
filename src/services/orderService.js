@@ -186,6 +186,76 @@ class OrderService {
     return this.addAttachmentUrls(convertBigIntToString(order));
   }
 
+  // Create an admin-initiated order for a specific vendor (no delivery-price requirement)
+  async createAdminOrderForVendor(userId, orderData, tenantId) {
+    const { vendorId, description, additionalNotes, userAddress, userLongitude, userLatitude, phoneNumber, neighborhoodId, attachments } = orderData;
+
+    const vendor = await prisma.vendor.findFirst({
+      where: { id: BigInt(vendorId), tenantId }
+    });
+
+    if (!vendor) {
+      throw new Error('Vendor not found');
+    }
+
+    if (vendor.isOpen !== 'true') {
+      throw new Error('Vendor is currently closed');
+    }
+
+    if (vendor.isLocked) {
+      throw new Error('Vendor is currently locked and cannot accept orders');
+    }
+
+    const order = await prisma.order.create({
+      data: {
+        tenantId,
+        userId: userId ? BigInt(userId) : null,
+        vendorId: BigInt(vendorId),
+        neighborhoodId: neighborhoodId ? BigInt(neighborhoodId) : null,
+        status: 'PENDING',
+        description,
+        additionalNotes,
+        userAddress,
+        userLongitude: userLongitude ? parseFloat(userLongitude) : null,
+        userLatitude: userLatitude ? parseFloat(userLatitude) : null,
+        phoneNumber,
+        deliveryPrice: null,
+        attachments: attachments && attachments.length > 0 ? {
+          create: attachments.map(att => ({
+            type: att.type,
+            link: att.link
+          }))
+        } : undefined
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            userName: true,
+            phoneNumber: true
+          }
+        },
+        vendor: {
+          select: {
+            id: true,
+            vendorName: true,
+            contactNumber: true,
+            address: true
+          }
+        },
+        attachments: true
+      }
+    });
+
+    // Send notification to vendor
+    try {
+      await notificationService.notifyNewOrder(vendorId, order.id, tenantId);
+    } catch (error) {
+      console.error('Failed to send notification to vendor:', error);
+    }
+    return this.addAttachmentUrls(convertBigIntToString(order));
+  }
+
   // Create order by vendor
   async createByVendor(vendorId, orderData, tenantId) {
     const { description, additionalNotes, userAddress, userLongitude, userLatitude, phoneNumber, neighborhoodId, price, waitingTime } = orderData;

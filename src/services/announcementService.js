@@ -84,7 +84,7 @@ class AnnouncementService {
     });
   }
 
-  async publish(id, tenantId, { userIds, captainIds } = {}) {
+  async publish(id, tenantId, { userIds, captainIds, vendorIds } = {}) {
     const existing = await prisma.announcement.findFirst({
       where: { id: BigInt(id), tenantId },
     });
@@ -102,9 +102,10 @@ class AnnouncementService {
       announcementId: serialized.id,
       ...(existing.imageUrl ? { imageUrl: existing.imageUrl } : {}),
     };
-    // userIds/captainIds: null = all, [] = skip, [ids] = specific
+    // userIds/captainIds/vendorIds: null = all, [] = skip, [ids] = specific
     const skipUsers = Array.isArray(userIds) && userIds.length === 0;
     const skipCaptains = Array.isArray(captainIds) && captainIds.length === 0;
+    const skipVendors = Array.isArray(vendorIds) && vendorIds.length === 0;
 
     if (!skipUsers) {
       const send = Array.isArray(userIds) && userIds.length > 0
@@ -117,6 +118,13 @@ class AnnouncementService {
       const send = Array.isArray(captainIds) && captainIds.length > 0
         ? notificationService.sendToSpecificCaptains(existing.title, existing.body, notifData, tenantId, captainIds)
         : notificationService.sendToAllCaptains(existing.title, existing.body, notifData, tenantId);
+      send.catch(console.error);
+    }
+
+    if (!skipVendors) {
+      const send = Array.isArray(vendorIds) && vendorIds.length > 0
+        ? notificationService.sendToSpecificVendors(existing.title, existing.body, notifData, tenantId, vendorIds)
+        : notificationService.sendToAllVendors(existing.title, existing.body, notifData, tenantId);
       send.catch(console.error);
     }
 

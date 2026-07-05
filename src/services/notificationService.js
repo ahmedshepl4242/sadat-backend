@@ -634,6 +634,60 @@ class NotificationService {
       return false;
     }
   }
+
+  // Broadcast announcement to ALL vendors of a tenant
+  async sendToAllVendors(title, body, data = {}, tenantId) {
+    try {
+      const vendors = await prisma.vendor.findMany({
+        where: { tenantId, fcmToken: { not: null } },
+        select: { fcmToken: true },
+      });
+      const tokens = vendors.map(v => v.fcmToken).filter(Boolean);
+      console.log(`[FCM] Sending announcement to ${tokens.length} vendors (tenant: ${tenantId})`);
+      if (tokens.length === 0) {
+        console.log('[FCM] No vendor tokens found, skipping.');
+        return false;
+      }
+      const BATCH_SIZE = 500;
+      let success = false;
+      for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
+        const batch = tokens.slice(i, i + BATCH_SIZE);
+        console.log(`[FCM] Sending vendor batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} tokens`);
+        const result = await this.sendMulticastNotification(batch, title, body, { ...data, userType: 'VENDOR' });
+        console.log(`[FCM] Vendor batch result: ${result ? 'success' : 'failed'}`);
+        if (result) success = true;
+      }
+      console.log(`[FCM] sendToAllVendors done. Overall success: ${success}`);
+      return success;
+    } catch (error) {
+      console.error('[FCM] Error sending notification to all vendors:', error);
+      return false;
+    }
+  }
+
+  // Send announcement to SPECIFIC vendors by id
+  async sendToSpecificVendors(title, body, data = {}, tenantId, vendorIds) {
+    try {
+      const vendors = await prisma.vendor.findMany({
+        where: { tenantId, id: { in: vendorIds.map(BigInt) }, fcmToken: { not: null } },
+        select: { fcmToken: true },
+      });
+      const tokens = vendors.map(v => v.fcmToken).filter(Boolean);
+      console.log(`[FCM] Sending to ${tokens.length} specific vendors`);
+      if (tokens.length === 0) return false;
+      const BATCH_SIZE = 500;
+      let success = false;
+      for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
+        const batch = tokens.slice(i, i + BATCH_SIZE);
+        const result = await this.sendMulticastNotification(batch, title, body, { ...data, userType: 'VENDOR' });
+        if (result) success = true;
+      }
+      return success;
+    } catch (error) {
+      console.error('[FCM] Error sending to specific vendors:', error);
+      return false;
+    }
+  }
 }
 
-module.exports = new NotificationService(); 
+module.exports = new NotificationService();
