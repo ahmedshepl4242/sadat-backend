@@ -404,8 +404,12 @@ class AdminController {
     try {
       const { userId, vendorId, description, additionalNotes, phoneNumber, neighborhoodId, attachments } = req.body;
 
-      if (!description || !phoneNumber || !neighborhoodId) {
-        return errorResponse(res, 'description, phoneNumber, and neighborhoodId are required', 400);
+      if (!phoneNumber || !neighborhoodId) {
+        return errorResponse(res, 'phoneNumber and neighborhoodId are required', 400);
+      }
+
+      if (!description && (!attachments || attachments.length === 0)) {
+        return errorResponse(res, 'description is required unless an attachment (image or voice note) is provided', 400);
       }
 
       if (userId) {
