@@ -402,7 +402,7 @@ class AdminController {
   // Create an order on behalf of a user (admin only) - optionally for a specific vendor
   async createOrderForUser(req, res) {
     try {
-      const { userId, vendorId, description, additionalNotes, phoneNumber, neighborhoodId, attachments } = req.body;
+      const { userId, vendorId, description, additionalNotes, phoneNumber, neighborhoodId, attachments, force } = req.body;
 
       if (!phoneNumber || !neighborhoodId) {
         return errorResponse(res, 'phoneNumber and neighborhoodId are required', 400);
@@ -437,11 +437,11 @@ class AdminController {
       };
 
       const result = hasVendor
-        ? await orderService.createAdminOrderForVendor(userId, orderData, req.tenant.id)
+        ? await orderService.createAdminOrderForVendor(userId, orderData, req.tenant.id, !!force)
         : await orderService.createSpecialOrder(userId, orderData, req.tenant.id);
       return successResponse(res, result, 'Order created successfully', 201);
     } catch (error) {
-      return errorResponse(res, error.message, 400);
+      return errorResponse(res, error.message, 400, error.code || null);
     }
   }
 

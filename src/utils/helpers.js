@@ -51,7 +51,7 @@ const getPagination = (page = 1, limit = 10) => {
 };
 
 // Response formatter
-const formatResponse = (success = true, data = null, message = '', error = null) => {
+const formatResponse = (success = true, data = null, message = '', error = null, errorCode = null) => {
   const response = {
     success,
     timestamp: new Date().toISOString()
@@ -60,6 +60,7 @@ const formatResponse = (success = true, data = null, message = '', error = null)
   if (data !== null) response.data = data;
   if (message) response.message = message;
   if (error) response.error = error;
+  if (errorCode) response.errorCode = errorCode;
 
   return response;
 };
@@ -70,8 +71,8 @@ const successResponse = (res, data = null, message = 'Success', statusCode = 200
 };
 
 // Error response
-const errorResponse = (res, error = 'An error occurred', statusCode = 500) => {
-  return res.status(statusCode).json(formatResponse(false, null, '', error));
+const errorResponse = (res, error = 'An error occurred', statusCode = 500, errorCode = null) => {
+  return res.status(statusCode).json(formatResponse(false, null, '', error, errorCode));
 };
 
 // BigInt to string converter for JSON serialization

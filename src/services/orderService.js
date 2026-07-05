@@ -203,7 +203,7 @@ class OrderService {
   }
 
   // Create an admin-initiated order for a specific vendor (no delivery-price requirement)
-  async createAdminOrderForVendor(userId, orderData, tenantId) {
+  async createAdminOrderForVendor(userId, orderData, tenantId, force = false) {
     const { vendorId, description, additionalNotes, userAddress, userLongitude, userLatitude, phoneNumber, neighborhoodId, attachments } = orderData;
 
     const vendor = await prisma.vendor.findFirst({
@@ -214,12 +214,16 @@ class OrderService {
       throw new Error('Vendor not found');
     }
 
-    if (vendor.isOpen !== 'true') {
-      throw new Error('Vendor is currently closed');
+    if (!force && vendor.isOpen !== 'true') {
+      const error = new Error('Vendor is currently closed');
+      error.code = 'VENDOR_CLOSED';
+      throw error;
     }
 
-    if (vendor.isLocked) {
-      throw new Error('Vendor is currently locked and cannot accept orders');
+    if (!force && vendor.isLocked) {
+      const error = new Error('Vendor is currently locked and cannot accept orders');
+      error.code = 'VENDOR_LOCKED';
+      throw error;
     }
 
     const order = await prisma.order.create({
