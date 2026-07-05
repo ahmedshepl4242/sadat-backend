@@ -310,12 +310,25 @@ class NotificationService {
     }
   }
 
+  // Build a human-readable order summary line (user, neighborhood, notes) for notification bodies
+  buildOrderDetailsText({ userName, neighborhoodName, notes } = {}) {
+    const parts = [];
+    if (userName) parts.push(`العميل: ${userName}`);
+    if (neighborhoodName) parts.push(`الحي: ${neighborhoodName}`);
+    if (notes) parts.push(`ملاحظات: ${notes}`);
+    return parts.join(' - ');
+  }
+
   // Order-specific notification methods
-  async notifyNewOrder(vendorId, orderId, tenantId) {
+  async notifyNewOrder(vendorId, orderId, tenantId, orderDetails = {}) {
+    const detailsText = this.buildOrderDetailsText(orderDetails);
+    const body = detailsText
+      ? `لقد استلمت طلباً جديداً. ${detailsText}`
+      : 'لقد استلمت طلباً جديداً. تحقق من التطبيق لمزيد من التفاصيل.';
     return await this.sendToVendor(
       vendorId,
       'طلب جديد',
-      'لقد استلمت طلباً جديداً. تحقق من التطبيق لمزيد من التفاصيل.',
+      body,
       tenantId,
       { orderId: orderId.toString(), type: 'NEW_ORDER' }
     );
@@ -407,10 +420,14 @@ class NotificationService {
   }
 
   // Notify admin about special orders
-  async notifyAdminSpecialOrder(orderId, tenantId) {
+  async notifyAdminSpecialOrder(orderId, tenantId, orderDetails = {}) {
+    const detailsText = this.buildOrderDetailsText(orderDetails);
+    const body = detailsText
+      ? `تم استلام طلب خاص ويحتاج إلى اهتمام المدير. ${detailsText}`
+      : 'تم استلام طلب خاص ويحتاج إلى اهتمام المدير. تحقق من لوحة التحكم للتفاصيل.';
     return await this.sendToAdmin(
       'طلب خاص',
-      'تم استلام طلب خاص ويحتاج إلى اهتمام المدير. تحقق من لوحة التحكم للتفاصيل.',
+      body,
       { orderId: orderId.toString(), type: 'SPECIAL_ORDER' },
       tenantId
     );

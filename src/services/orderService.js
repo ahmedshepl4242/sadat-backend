@@ -67,6 +67,12 @@ class OrderService {
             phoneNumber: true
           }
         },
+        neighborhood: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
         attachments: true
       }
     });
@@ -74,11 +80,21 @@ class OrderService {
     // Send notifications to admin and all available captains
     setImmediate(async () => {
       try {
+        const orderDetails = {
+          userName: order.user?.userName,
+          neighborhoodName: order.neighborhood?.name,
+          notes: order.additionalNotes,
+        };
+        const detailsText = notificationService.buildOrderDetailsText(orderDetails);
+        const captainBody = detailsText
+          ? `يوجد طلب توصيل خاص جديد. ${detailsText}`
+          : 'يوجد طلب توصيل خاص جديد. تحقق من التطبيق للقبول وتحديد سعر التوصيل.';
+
         await Promise.all([
-          notificationService.notifyAdminSpecialOrder(order.id, tenantId),
+          notificationService.notifyAdminSpecialOrder(order.id, tenantId, orderDetails),
           notificationService.sendToAllAvailableCaptains(
             'طلب توصيل خاص متاح',
-            'يوجد طلب توصيل خاص جديد. تحقق من التطبيق للقبول وتحديد سعر التوصيل.',
+            captainBody,
             { orderId: order.id.toString(), type: 'SPECIAL_ORDER_AVAILABLE' },
             tenantId
           )
@@ -243,13 +259,23 @@ class OrderService {
             address: true
           }
         },
+        neighborhood: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
         attachments: true
       }
     });
 
     // Send notification to vendor
     try {
-      await notificationService.notifyNewOrder(vendorId, order.id, tenantId);
+      await notificationService.notifyNewOrder(vendorId, order.id, tenantId, {
+        userName: order.user?.userName,
+        neighborhoodName: order.neighborhood?.name,
+        notes: order.additionalNotes,
+      });
     } catch (error) {
       console.error('Failed to send notification to vendor:', error);
     }

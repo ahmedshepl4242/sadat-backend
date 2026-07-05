@@ -89,7 +89,6 @@ class AnnouncementService {
       where: { id: BigInt(id), tenantId },
     });
     if (!existing) throw new Error('Announcement not found');
-    if (existing.isPublished) throw new Error('Already published');
 
     const updated = await prisma.announcement.update({
       where: { id_tenantId: { id: BigInt(id), tenantId } },
