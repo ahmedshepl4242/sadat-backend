@@ -193,11 +193,19 @@ class OrderService {
       }
     });
 
-    // Send notification to vendor
+    // Send notifications to the vendor and the admin
     try {
-      await notificationService.notifyNewOrder(vendorId, order.id, tenantId);
+      const orderDetails = {
+        userName: order.user?.userName,
+        vendorName: order.vendor?.vendorName,
+        notes: order.additionalNotes,
+      };
+      await Promise.all([
+        notificationService.notifyNewOrder(vendorId, order.id, tenantId, orderDetails),
+        notificationService.notifyAdminNewVendorOrder(order.id, tenantId, orderDetails),
+      ]);
     } catch (error) {
-      console.error('Failed to send notification to vendor:', error);
+      console.error('Failed to send order notifications:', error);
     }
     return this.addAttachmentUrls(convertBigIntToString(order));
   }
@@ -273,15 +281,21 @@ class OrderService {
       }
     });
 
-    // Send notification to vendor
+    // Send notifications to the vendor and the admin
+    const orderDetails = {
+      userName: order.user?.userName,
+      vendorName: order.vendor?.vendorName,
+      neighborhoodName: order.neighborhood?.name,
+      notes: order.additionalNotes,
+    };
+
     try {
-      await notificationService.notifyNewOrder(vendorId, order.id, tenantId, {
-        userName: order.user?.userName,
-        neighborhoodName: order.neighborhood?.name,
-        notes: order.additionalNotes,
-      });
+      await Promise.all([
+        notificationService.notifyNewOrder(vendorId, order.id, tenantId, orderDetails),
+        notificationService.notifyAdminNewVendorOrder(order.id, tenantId, orderDetails),
+      ]);
     } catch (error) {
-      console.error('Failed to send notification to vendor:', error);
+      console.error('Failed to send order notifications:', error);
     }
     return this.addAttachmentUrls(convertBigIntToString(order));
   }
@@ -357,16 +371,22 @@ class OrderService {
       }
     });
 
-    // Send notification to all available captains
+    // Send notifications to all available captains and the admin
     try {
-      await notificationService.sendToAllAvailableCaptains(
-        'طلب توصيل جديد',
-        'يوجد طلب توصيل جديد متاح. تحقق من التطبيق للقبول.',
-        { orderId: order.id.toString(), type: 'DELIVERY_AVAILABLE' },
-        tenantId
-      );
+      await Promise.all([
+        notificationService.sendToAllAvailableCaptains(
+          'طلب توصيل جديد',
+          'يوجد طلب توصيل جديد متاح. تحقق من التطبيق للقبول.',
+          { orderId: order.id.toString(), type: 'DELIVERY_AVAILABLE' },
+          tenantId
+        ),
+        notificationService.notifyAdminNewVendorOrder(order.id, tenantId, {
+          vendorName: order.vendor?.vendorName,
+          notes: order.additionalNotes,
+        }),
+      ]);
     } catch (error) {
-      console.error('Failed to send notification to captains:', error);
+      console.error('Failed to send order notifications:', error);
     }
 
     return convertBigIntToString(order);

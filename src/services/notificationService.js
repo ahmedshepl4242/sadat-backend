@@ -343,10 +343,11 @@ class NotificationService {
     }
   }
 
-  // Build a human-readable order summary line (user, neighborhood, notes) for notification bodies
-  buildOrderDetailsText({ userName, neighborhoodName, notes } = {}) {
+  // Build a human-readable order summary line (user, vendor, neighborhood, notes) for notification bodies
+  buildOrderDetailsText({ userName, vendorName, neighborhoodName, notes } = {}) {
     const parts = [];
     if (userName) parts.push(`العميل: ${userName}`);
+    if (vendorName) parts.push(`المتجر: ${vendorName}`);
     if (neighborhoodName) parts.push(`الحي: ${neighborhoodName}`);
     if (notes) parts.push(`ملاحظات: ${notes}`);
     return parts.join(' - ');
@@ -462,6 +463,20 @@ class NotificationService {
       'طلب خاص',
       body,
       { orderId: orderId.toString(), type: 'SPECIAL_ORDER' },
+      tenantId
+    );
+  }
+
+  // Notify admin about an admin-created order that was placed with a specific vendor
+  async notifyAdminNewVendorOrder(orderId, tenantId, orderDetails = {}) {
+    const detailsText = this.buildOrderDetailsText(orderDetails);
+    const body = detailsText
+      ? `تم إنشاء طلب جديد لأحد المتاجر. ${detailsText}`
+      : 'تم إنشاء طلب جديد لأحد المتاجر. تحقق من لوحة التحكم للتفاصيل.';
+    return await this.sendToAdmin(
+      'طلب جديد لمتجر',
+      body,
+      { orderId: orderId.toString(), type: 'NEW_VENDOR_ORDER' },
       tenantId
     );
   }
