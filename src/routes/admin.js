@@ -2323,5 +2323,6 @@ router.put('/vendors/:id/reset-password', protectAdmin, adminController.resetVen
 router.post('/orders/create-for-user', protectAdmin, adminController.createOrderForUser);
 router.put('/orders/:orderId/release-captain', protectAdmin, adminController.releaseCaptain);
 router.put('/orders/:orderId/assign-captain', protectAdmin, adminController.assignCaptain);
+router.put('/orders/:orderId/cancel', protectAdmin, adminController.cancelOrder);
 
 module.exports = router;

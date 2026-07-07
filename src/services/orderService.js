@@ -1396,40 +1396,45 @@ class OrderService {
 
   // Delete order (only if pending OR COUNTER OFFER! and belongs to user)
   async deleteOrder(orderId, userId, tenantId) {
-    // Verify order exists and belongs to user
+    // Verify order exists, belongs to user, and no captain has accepted it yet.
+    // Once a captain accepts (ACCEPTED_BY_CAPTAIN), only an admin can cancel
+    // (see adminCancelOrder) since a real captain is already committed.
     const order = await prisma.order.findFirst({
       where: {
         id: BigInt(orderId),
         userId: BigInt(userId),
         tenantId,
         status: {
-          in: ['PENDING', 'COUNTER_OFFER_SENT'],
+          in: ['PENDING', 'COUNTER_OFFER_SENT', 'COUNTER_OFFER_ACCEPTED'],
         },
       },
     });
 
     if (!order) {
-      throw new Error('Order not found or cannot be deleted');
+      throw new Error('Order not found or cannot be cancelled');
     }
 
-    // Send notification to vendor before deleting
-    try {
-      await notificationService.notifyOrderCancelled(order.vendorId, orderId, tenantId);
-    } catch (error) {
-      console.error('Failed to send order cancellation notification:', error);
-    }
-
-    // Delete order
-    await prisma.order.delete({
+    // Mark as cancelled (keep the row for history/stats) instead of deleting it
+    const updatedOrder = await prisma.order.update({
       where: {
         id_tenantId: {
           id: BigInt(orderId),
           tenantId
         }
-      }
+      },
+      data: { status: 'CANCELLED' }
     });
 
-    return { message: 'Order deleted successfully' };
+    // Notify vendor of the cancellation
+    try {
+      if (order.vendorId && order.vendorId !== BigInt(-1)) {
+        await notificationService.notifyOrderCancelled(order.vendorId, orderId, tenantId);
+      }
+    } catch (error) {
+      console.error('Failed to send order cancellation notification:', error);
+    }
+
+    return convertBigIntToString(updatedOrder);
   }
 
   // Get order statistics
@@ -1677,6 +1682,62 @@ class OrderService {
             tenantId
           );
         } catch (e) { console.error('releaseCaptain notify error:', e); }
+      });
+
+      return convertBigIntToString(updated);
+    });
+  }
+
+  // Admin: cancel an order at any point (including after captain acceptance)
+  async adminCancelOrder(orderId, tenantId) {
+    return await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({
+        where: {
+          id: BigInt(orderId),
+          tenantId,
+          status: { notIn: ['DELIVERED', 'CANCELLED'] },
+        },
+        select: { id: true, captainId: true, userId: true, vendorId: true },
+      });
+      if (!order) throw new Error('Order not found or cannot be cancelled (already delivered/cancelled)');
+
+      if (order.captainId) {
+        await tx.captain.update({
+          where: { id_tenantId: { id: order.captainId, tenantId } },
+          data: { currentNumberOfOrders: { decrement: 1 } },
+        });
+
+        const captain = await tx.captain.findUnique({
+          where: { id_tenantId: { id: order.captainId, tenantId } },
+          select: { currentNumberOfOrders: true },
+        });
+        updateCaptainOrderCountsInCache(
+          order.captainId.toString(),
+          tenantId,
+          { currentNumberOfOrders: Math.max(0, captain.currentNumberOfOrders) }
+        );
+      }
+
+      const updated = await tx.order.update({
+        where: { id_tenantId: { id: BigInt(orderId), tenantId } },
+        data: { status: 'CANCELLED' },
+      });
+
+      setImmediate(async () => {
+        try {
+          if (order.captainId) {
+            await notificationService.sendToCaptain(
+              order.captainId,
+              'تم إلغاء الطلب',
+              'قام المدير بإلغاء أحد الطلبات المسندة إليك.',
+              tenantId,
+              { orderId: orderId.toString(), type: 'ORDER_CANCELLED' }
+            );
+          }
+          if (order.vendorId && order.vendorId !== BigInt(-1)) {
+            await notificationService.notifyOrderCancelled(order.vendorId, orderId, tenantId);
+          }
+        } catch (e) { console.error('adminCancelOrder notify error:', e); }
       });
 
       return convertBigIntToString(updated);

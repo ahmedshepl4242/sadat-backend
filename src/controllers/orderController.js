@@ -174,7 +174,7 @@ class OrderController {
     try {
       const { id } = req.params;
       const result = await orderService.deleteOrder(id, req.user.id, req.tenant.id);
-      return successResponse(res, result, 'Order deleted successfully');
+      return successResponse(res, result, 'Order cancelled successfully');
     } catch (error) {
       return errorResponse(res, error.message, 400);
     }

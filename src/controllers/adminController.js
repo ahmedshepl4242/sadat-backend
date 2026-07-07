@@ -456,6 +456,15 @@ class AdminController {
     }
   }
 
+  async cancelOrder(req, res) {
+    try {
+      const result = await orderService.adminCancelOrder(req.params.orderId, req.tenant.id);
+      return successResponse(res, result, 'Order cancelled successfully');
+    } catch (error) {
+      return errorResponse(res, error.message, 400);
+    }
+  }
+
   async assignCaptain(req, res) {
     try {
       const { captainId } = req.body;
