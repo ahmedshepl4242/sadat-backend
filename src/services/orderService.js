@@ -213,7 +213,7 @@ class OrderService {
 
   // Create an admin-initiated order for a specific vendor (no delivery-price requirement)
   async createAdminOrderForVendor(userId, orderData, tenantId, force = false) {
-    const { vendorId, description, additionalNotes, userAddress, userLongitude, userLatitude, phoneNumber, neighborhoodId, attachments } = orderData;
+    const { vendorId, description, additionalNotes, userAddress, userLongitude, userLatitude, phoneNumber, neighborhoodId, attachments, skipApproval, waitingTime } = orderData;
 
     const vendor = await prisma.vendor.findFirst({
       where: { id: BigInt(vendorId), tenantId }
@@ -241,7 +241,7 @@ class OrderService {
         userId: userId ? BigInt(userId) : null,
         vendorId: BigInt(vendorId),
         neighborhoodId: neighborhoodId ? BigInt(neighborhoodId) : null,
-        status: 'PENDING',
+        status: skipApproval ? 'COUNTER_OFFER_ACCEPTED' : 'PENDING',
         description,
         additionalNotes,
         userAddress,
@@ -249,6 +249,8 @@ class OrderService {
         userLatitude: userLatitude ? parseFloat(userLatitude) : null,
         phoneNumber,
         deliveryPrice: null,
+        waitingTime: waitingTime ? parseInt(waitingTime) : null,
+        acceptedByVend: skipApproval ? new Date() : null,
         attachments: attachments && attachments.length > 0 ? {
           create: attachments.map(att => ({
             type: att.type,
