@@ -20,7 +20,7 @@ class ItemService {
 
   // Create item
   async createItem(vendorId, itemData, photo, tenantId) {
-    const { name, description, price } = itemData;
+    const { name, description, price, sizes } = itemData;
 
     // Verify vendor exists
     const vendor = await prisma.vendor.findFirst({
@@ -53,7 +53,16 @@ class ItemService {
         description,
         price: parseFloat(price),
         imageLink: photoUrl,
-        isAvailable: true
+        isAvailable: true,
+        sizes: sizes && sizes.length > 0 ? {
+          create: sizes.map(s => ({
+            tenantId,
+            name: s.name,
+            price: parseFloat(s.price),
+            discountPrice: s.discountPrice != null ? parseFloat(s.discountPrice) : null,
+            isAvailable: s.isAvailable !== false
+          }))
+        } : undefined
       },
       select: {
         id: true,
@@ -62,7 +71,8 @@ class ItemService {
         price: true,
         imageLink: true,
         isAvailable: true,
-        vendorId: true
+        vendorId: true,
+        sizes: true
       }
     });
 
@@ -71,7 +81,7 @@ class ItemService {
 
   // Update item
   async updateItem(itemId, vendorId, itemData, photo, tenantId) {
-    const { name, description, price, isAvailable } = itemData;
+    const { name, description, price, isAvailable, sizes } = itemData;
 
     // Verify item belongs to vendor
     const existingItem = await prisma.item.findFirst({
@@ -122,7 +132,17 @@ class ItemService {
         description: description !== undefined ? description : existingItem.description,
         price: price !== undefined ? parseFloat(price) : existingItem.price,
         imageLink: photoUrl,
-        isAvailable: isAvailableBool !== undefined ? isAvailableBool : existingItem.isAvailable
+        isAvailable: isAvailableBool !== undefined ? isAvailableBool : existingItem.isAvailable,
+        sizes: sizes !== undefined ? {
+          deleteMany: {},
+          create: sizes.map(s => ({
+            tenantId,
+            name: s.name,
+            price: parseFloat(s.price),
+            discountPrice: s.discountPrice != null ? parseFloat(s.discountPrice) : null,
+            isAvailable: s.isAvailable !== false
+          }))
+        } : undefined
       },
       select: {
         id: true,
@@ -131,7 +151,8 @@ class ItemService {
         price: true,
         imageLink: true,
         isAvailable: true,
-        vendorId: true
+        vendorId: true,
+        sizes: true
       }
     });
 
@@ -195,7 +216,8 @@ class ItemService {
           price: true,
           imageLink: true,
           isAvailable: true,
-          vendorId: true
+          vendorId: true,
+          sizes: true
         },
         skip,
         take: parseInt(limit)

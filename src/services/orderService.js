@@ -35,7 +35,7 @@ class OrderService {
   // Create order by user
   // Create special admin order (vendor_id == -1)
   async createSpecialOrder(userId, orderData, tenantId) {
-    const { description, additionalNotes, userAddress, userLongitude, userLatitude, phoneNumber, neighborhoodId, attachments } = orderData;
+    const { description, additionalNotes, userAddress, userLongitude, userLatitude, phoneNumber, neighborhoodId, attachments, waitingTime } = orderData;
 
     // Create special admin order with COUNTER_OFFER_ACCEPTED status
     const order = await prisma.order.create({
@@ -52,6 +52,7 @@ class OrderService {
         userLatitude: userLatitude ? parseFloat(userLatitude) : null,
         phoneNumber,
         deliveryPrice: null,
+        waitingTime: waitingTime ? parseInt(waitingTime) : null,
         attachments: attachments && attachments.length > 0 ? {
           create: attachments.map(att => ({
             type: att.type,

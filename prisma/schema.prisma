@@ -122,9 +122,28 @@ model Item {
   // Relations
   vendor Vendor @relation(fields: [vendorId, tenantId], references: [id, tenantId], onDelete: Cascade)
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sizes  ItemSize[]
 
   @@id([id, tenantId])
   @@map("items")
+}
+
+model ItemSize {
+  id            BigInt   @default(autoincrement())
+  tenantId      String   @map("tenant_id")
+  itemId        BigInt   @map("item_id")
+  name          String
+  price         Float
+  discountPrice Float?   @map("discount_price")
+  isAvailable   Boolean  @default(true) @map("is_available")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  item   Item   @relation(fields: [itemId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([id, tenantId])
+  @@map("item_sizes")
 }
 
 model Category {
@@ -357,6 +376,7 @@ model Tenant {
   captainRequests          CaptainRequest[]
   orderAttachments         OrderAttachment[]
   items                    Item[]
+  itemSizes                ItemSize[]
   categories               Category[]
   vendorCategories         VendorCategory[]
   announcements            Announcement[]
