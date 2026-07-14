@@ -18,8 +18,12 @@ class VendorService {
     return vendors.map(vendor => this.addImageUrls(vendor));
   }
   // Vendor registration
-  async signup(vendorData, tenantId) {
-    const { vendorName, contactNumber, password, address, longitude, latitude, image, description, neighborhoodId, fcmToken, categories } = vendorData;
+  async signup(vendorData, imageFile, tenantId) {
+    const { vendorName, contactNumber, password, address, longitude, latitude, description, neighborhoodId, fcmToken, categories } = vendorData;
+
+    if (!imageFile || !imageFile.buffer) {
+      throw new Error('Vendor image is required');
+    }
 
     // Check if vendor already exists within tenant
     const existingVendor = await prisma.vendor.findFirst({
@@ -39,6 +43,15 @@ class VendorService {
     // Hash password
     const hashedPassword = await hashPassword(password);
 
+    // Upload image to Wasabi (temp ID since vendor doesn't exist yet)
+    const tempId = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    const imageKey = await wasabiService.uploadVendorProfileImage(imageFile.buffer, tempId);
+
+    // categories may arrive as an array (JSON) or a comma-separated string (multipart form)
+    const categoriesList = Array.isArray(categories)
+      ? categories
+      : (categories ? categories.split(',').map(s => s.trim()).filter(Boolean) : []);
+
     // Create vendor with categories
     const vendor = await prisma.vendor.create({
       data: {
@@ -50,13 +63,13 @@ class VendorService {
         longitude: longitude ? parseFloat(longitude) : null,
         latitude: latitude ? parseFloat(latitude) : null,
         description,
-        image,
+        image: imageKey,
         neighborhoodId: neighborhoodId ? BigInt(neighborhoodId) : null,
         fcmToken,
         isOpen: 'true',
         isLocked: true, // Locked by default until admin approval
-        vendorCategories: categories && categories.length > 0 ? {
-          create: categories.map(categoryId => ({
+        vendorCategories: categoriesList.length > 0 ? {
+          create: categoriesList.map(categoryId => ({
             categoryId: BigInt(categoryId)
           }))
         } : undefined,

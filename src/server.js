@@ -162,11 +162,27 @@ process.on("SIGTERM", async () => {
 });
 
 const PORT = process.env.PORT_TEST || 3004;
+const FALLBACK_PORTS = [3055, 3050];
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-});
+function startServer(ports) {
+  const [port, ...rest] = ports;
+
+  const server = app.listen(port, () => {
+    console.log(`🚀 Server running on port ${port}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV}`);
+    console.log(`🔗 Health check: http://localhost:${port}/health`);
+  });
+
+  server.on("error", (err) => {
+    if (err.code === "EADDRINUSE" && rest.length > 0) {
+      console.log(`⚠️ Port ${port} is already in use, trying ${rest[0]}...`);
+      startServer(rest);
+    } else {
+      throw err;
+    }
+  });
+}
+
+startServer([PORT, ...FALLBACK_PORTS]);
 
 module.exports = app;

@@ -217,7 +217,7 @@ router.post('/login/user', userValidation.login, authController.userLogin);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/signup/vendor', vendorValidation.signup, authController.vendorSignup);
+router.post('/signup/vendor', upload.single('image'), vendorValidation.signup, authController.vendorSignup);
 
 /**
  * @swagger

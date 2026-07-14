@@ -30,7 +30,8 @@ class AuthController {
   // Vendor signup
   async vendorSignup(req, res) {
     try {
-      const result = await vendorService.signup(req.body, req.tenant.id);
+      const image = req.file; // Multer populates this with the uploaded file
+      const result = await vendorService.signup(req.body, image, req.tenant.id);
       return successResponse(res, result, 'Vendor registered successfully', 201);
     } catch (error) {
       return errorResponse(res, error.message, 400);

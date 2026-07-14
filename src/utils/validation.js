@@ -124,10 +124,6 @@ const vendorValidation = {
       .trim()
       .isLength({ max: 500 })
       .withMessage("Description must be less than 500 characters"),
-    body("image")
-      .optional()
-      .isString()
-      .withMessage("Image must be a base64 encoded string"),
     body("neighborhoodId")
       .isInt({ min: 1 })
       .withMessage("Valid neighborhood ID is required"),
@@ -136,6 +132,15 @@ const vendorValidation = {
       .trim()
       .isLength({ min: 1 })
       .withMessage("FCM token must not be empty when provided"),
+    (req, res, next) => {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: "Vendor image is required",
+        });
+      }
+      next();
+    },
     handleValidationErrors,
   ],
   updateProfile: [
