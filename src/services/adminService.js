@@ -779,7 +779,19 @@ class AdminService {
               id: true,
               vendorName: true,
               contactNumber: true,
-              address: true
+              address: true,
+              neighborhood: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              }
+            }
+          },
+          neighborhood: {
+            select: {
+              id: true,
+              name: true
             }
           },
           attachments: true
@@ -830,7 +842,19 @@ class AdminService {
               id: true,
               vendorName: true,
               contactNumber: true,
-              address: true
+              address: true,
+              neighborhood: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              }
+            }
+          },
+          neighborhood: {
+            select: {
+              id: true,
+              name: true
             }
           },
           attachments: true

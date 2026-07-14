@@ -533,11 +533,19 @@ class CaptainService {
               vendorName: true,
               contactNumber: true,
               address: true,
+              neighborhood: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
             },
           },
           neighborhood: {
-            id: true,
-            name: true,
+            select: {
+              id: true,
+              name: true,
+            },
           },
         },
         orderBy: { createdAt: "desc" },
