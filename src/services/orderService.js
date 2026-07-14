@@ -229,6 +229,12 @@ class OrderService {
             vendorName: true,
             contactNumber: true,
             address: true,
+            neighborhood: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
         attachments: true,
@@ -339,6 +345,12 @@ class OrderService {
             vendorName: true,
             contactNumber: true,
             address: true,
+            neighborhood: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
         neighborhood: {
@@ -455,6 +467,12 @@ class OrderService {
             vendorName: true,
             contactNumber: true,
             address: true,
+            neighborhood: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
@@ -531,6 +549,12 @@ class OrderService {
             vendorName: true,
             contactNumber: true,
             address: true,
+            neighborhood: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
         attachments: true,
@@ -621,6 +645,12 @@ class OrderService {
             vendorName: true,
             contactNumber: true,
             address: true,
+            neighborhood: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
         attachments: true,
@@ -702,6 +732,12 @@ class OrderService {
             vendorName: true,
             contactNumber: true,
             address: true,
+            neighborhood: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
@@ -891,6 +927,12 @@ class OrderService {
               vendorName: true,
               contactNumber: true,
               address: true,
+              neighborhood: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
             },
           },
           captain: {
@@ -1017,6 +1059,12 @@ class OrderService {
               longitude: true,
               latitude: true,
               address: true,
+              neighborhood: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
             },
           },
           neighborhood: {
@@ -1075,6 +1123,12 @@ class OrderService {
               vendorName: true,
               contactNumber: true,
               address: true,
+              neighborhood: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
             },
           },
           neighborhood: {
@@ -1135,6 +1189,12 @@ class OrderService {
             vendorName: true,
             contactNumber: true,
             address: true,
+            neighborhood: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
         captain: {
@@ -1233,6 +1293,12 @@ class OrderService {
             vendorName: true,
             contactNumber: true,
             address: true,
+            neighborhood: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
@@ -1296,6 +1362,12 @@ class OrderService {
             vendorName: true,
             contactNumber: true,
             address: true,
+            neighborhood: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
         captain: {
@@ -1362,6 +1434,12 @@ class OrderService {
               vendorName: true,
               contactNumber: true,
               address: true,
+              neighborhood: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
             },
           },
           captain: {
@@ -1602,6 +1680,12 @@ class OrderService {
             vendorName: true,
             contactNumber: true,
             address: true,
+            neighborhood: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
         captain: {
@@ -1755,6 +1839,12 @@ class OrderService {
               vendorName: true,
               contactNumber: true,
               address: true,
+              neighborhood: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
             },
           },
           captain: {
