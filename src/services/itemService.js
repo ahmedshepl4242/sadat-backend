@@ -56,7 +56,6 @@ class ItemService {
         isAvailable: true,
         sizes: sizes && sizes.length > 0 ? {
           create: sizes.map(s => ({
-            tenantId,
             name: s.name,
             price: parseFloat(s.price),
             discountPrice: s.discountPrice != null ? parseFloat(s.discountPrice) : null,
@@ -136,7 +135,6 @@ class ItemService {
         sizes: sizes !== undefined ? {
           deleteMany: {},
           create: sizes.map(s => ({
-            tenantId,
             name: s.name,
             price: parseFloat(s.price),
             discountPrice: s.discountPrice != null ? parseFloat(s.discountPrice) : null,
