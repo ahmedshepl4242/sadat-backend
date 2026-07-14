@@ -682,20 +682,28 @@ class CaptainService {
   }
 
   // Get captain statistics
+  // Both totalOrders and totalEarnings are scoped to orders delivered since
+  // the captain's last account settlement (lastActivated), so they reset to
+  // zero whenever admin settles/reactivates the captain's account.
   async getCaptainStats(captainId, tenantId) {
-    const [totalOrders, totalEarnings] = await Promise.all([
-      prisma.order.count({
-        where: {
-          captainId: BigInt(captainId),
-          tenantId,
-          status: "DELIVERED",
-        },
+    const captain = await prisma.captain.findFirst({
+      where: { id: BigInt(captainId), tenantId },
+      select: { lastActivated: true },
+    });
+
+    const deliveredSinceActivation = {
+      captainId: BigInt(captainId),
+      tenantId,
+      status: "DELIVERED",
+      ...(captain?.lastActivated && {
+        deliveredAt: { gte: captain.lastActivated },
       }),
+    };
+
+    const [totalOrders, totalEarnings] = await Promise.all([
+      prisma.order.count({ where: deliveredSinceActivation }),
       prisma.order.aggregate({
-        where: {
-          captainId: BigInt(captainId),
-          tenantId,
-        },
+        where: deliveredSinceActivation,
         _sum: { deliveryPrice: true },
       }),
     ]);
