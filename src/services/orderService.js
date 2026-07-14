@@ -1,18 +1,22 @@
-const prisma = require('../utils/prisma');
-const { convertBigIntToString } = require('../utils/helpers');
-const notificationService = require('./notificationService');
-const { getCaptainLocation, updateCaptainLockInCache, updateCaptainOrderCountsInCache } = require('./captainService');
-const wasabiService = require('./wasabiService');
-
-
+const prisma = require("../utils/prisma");
+const { convertBigIntToString } = require("../utils/helpers");
+const notificationService = require("./notificationService");
+const {
+  getCaptainLocation,
+  updateCaptainLockInCache,
+  updateCaptainOrderCountsInCache,
+} = require("./captainService");
+const wasabiService = require("./wasabiService");
 
 class OrderService {
   // Helper function to add pre-signed URLs to attachments
   addAttachmentUrls(order) {
     if (order.attachments && Array.isArray(order.attachments)) {
-      order.attachments = order.attachments.map(attachment => {
+      order.attachments = order.attachments.map((attachment) => {
         if (attachment.link) {
-          attachment.linkUrl = wasabiService.generatePreSignedUrl(attachment.link);
+          attachment.linkUrl = wasabiService.generatePreSignedUrl(
+            attachment.link,
+          );
         }
         return attachment;
       });
@@ -22,12 +26,14 @@ class OrderService {
 
   // Helper function to add pre-signed URLs to multiple orders
   addAttachmentUrlsToArray(orders) {
-    return orders.map(order => this.addAttachmentUrls(order));
+    return orders.map((order) => this.addAttachmentUrls(order));
   }
   addCaptainUrlsToArray(orders) {
-    return orders.map(order => {
+    return orders.map((order) => {
       if (order.captain && order.captain.photo) {
-        order.captain.photoUrl = wasabiService.generatePreSignedUrl(order.captain.photo);
+        order.captain.photoUrl = wasabiService.generatePreSignedUrl(
+          order.captain.photo,
+        );
       }
       return order;
     });
@@ -35,7 +41,17 @@ class OrderService {
   // Create order by user
   // Create special admin order (vendor_id == -1)
   async createSpecialOrder(userId, orderData, tenantId) {
-    const { description, additionalNotes, userAddress, userLongitude, userLatitude, phoneNumber, neighborhoodId, attachments, waitingTime } = orderData;
+    const {
+      description,
+      additionalNotes,
+      userAddress,
+      userLongitude,
+      userLatitude,
+      phoneNumber,
+      neighborhoodId,
+      attachments,
+      waitingTime,
+    } = orderData;
 
     // Create special admin order with COUNTER_OFFER_ACCEPTED status
     const order = await prisma.order.create({
@@ -44,7 +60,7 @@ class OrderService {
         userId: userId ? BigInt(userId) : null,
         vendorId: BigInt(-1),
         neighborhoodId: neighborhoodId ? BigInt(neighborhoodId) : null,
-        status: 'COUNTER_OFFER_ACCEPTED',
+        status: "COUNTER_OFFER_ACCEPTED",
         description,
         additionalNotes,
         userAddress,
@@ -53,29 +69,32 @@ class OrderService {
         phoneNumber,
         deliveryPrice: null,
         waitingTime: waitingTime ? parseInt(waitingTime) : null,
-        attachments: attachments && attachments.length > 0 ? {
-          create: attachments.map(att => ({
-            type: att.type,
-            link: att.link
-          }))
-        } : undefined
+        attachments:
+          attachments && attachments.length > 0
+            ? {
+                create: attachments.map((att) => ({
+                  type: att.type,
+                  link: att.link,
+                })),
+              }
+            : undefined,
       },
       include: {
         user: {
           select: {
             id: true,
             userName: true,
-            phoneNumber: true
-          }
+            phoneNumber: true,
+          },
         },
         neighborhood: {
           select: {
             id: true,
-            name: true
-          }
+            name: true,
+          },
         },
-        attachments: true
-      }
+        attachments: true,
+      },
     });
 
     // Send notifications to admin and all available captains
@@ -86,22 +105,27 @@ class OrderService {
           neighborhoodName: order.neighborhood?.name,
           notes: order.additionalNotes,
         };
-        const detailsText = notificationService.buildOrderDetailsText(orderDetails);
+        const detailsText =
+          notificationService.buildOrderDetailsText(orderDetails);
         const captainBody = detailsText
           ? `يوجد طلب توصيل خاص جديد. ${detailsText}`
-          : 'يوجد طلب توصيل خاص جديد. تحقق من التطبيق للقبول وتحديد سعر التوصيل.';
+          : "يوجد طلب توصيل خاص جديد. تحقق من التطبيق للقبول وتحديد سعر التوصيل.";
 
         await Promise.all([
-          notificationService.notifyAdminSpecialOrder(order.id, tenantId, orderDetails),
+          notificationService.notifyAdminSpecialOrder(
+            order.id,
+            tenantId,
+            orderDetails,
+          ),
           notificationService.sendToAllAvailableCaptains(
-            'طلب توصيل خاص متاح',
+            "طلب توصيل خاص متاح",
             captainBody,
-            { orderId: order.id.toString(), type: 'SPECIAL_ORDER_AVAILABLE' },
-            tenantId
-          )
+            { orderId: order.id.toString(), type: "SPECIAL_ORDER_AVAILABLE" },
+            tenantId,
+          ),
         ]);
       } catch (error) {
-        console.error('Failed to send special order notifications:', error);
+        console.error("Failed to send special order notifications:", error);
       }
     });
 
@@ -109,10 +133,20 @@ class OrderService {
   }
 
   async createByUser(userId, orderData, tenantId) {
-    const { vendorId, description, additionalNotes, userAddress, userLongitude, userLatitude, phoneNumber, neighborhoodId, attachments } = orderData;
+    const {
+      vendorId,
+      description,
+      additionalNotes,
+      userAddress,
+      userLongitude,
+      userLatitude,
+      phoneNumber,
+      neighborhoodId,
+      attachments,
+    } = orderData;
 
     // Check for special admin order (vendorId -1)
-    if (vendorId === -1 || vendorId === '-1') {
+    if (vendorId === -1 || vendorId === "-1") {
       return await this.createSpecialOrder(userId, orderData, tenantId);
     }
 
@@ -120,20 +154,20 @@ class OrderService {
     const vendor = await prisma.vendor.findFirst({
       where: {
         id: BigInt(vendorId),
-        tenantId
-      }
+        tenantId,
+      },
     });
 
     if (!vendor) {
-      throw new Error('Vendor not found');
+      throw new Error("Vendor not found");
     }
 
-    if (vendor.isOpen !== 'true') {
-      throw new Error('Vendor is currently closed');
+    if (vendor.isOpen !== "true") {
+      throw new Error("Vendor is currently closed");
     }
 
     if (vendor.isLocked) {
-      throw new Error('Vendor is currently locked and cannot accept orders');
+      throw new Error("Vendor is currently locked and cannot accept orders");
     }
 
     // Get delivery price from vendor-neighborhood pricing within tenant
@@ -143,12 +177,14 @@ class OrderService {
         where: {
           vendorId: BigInt(vendorId),
           neighborhoodId: BigInt(neighborhoodId),
-          tenantId
-        }
+          tenantId,
+        },
       });
       deliveryPrice = pricing ? pricing.price : null;
       if (!deliveryPrice) {
-        throw new Error('Delivery price not found for the selected neighborhood');
+        throw new Error(
+          "Delivery price not found for the selected neighborhood",
+        );
       }
     }
 
@@ -159,39 +195,43 @@ class OrderService {
         userId: BigInt(userId),
         vendorId: BigInt(vendorId),
         neighborhoodId: neighborhoodId ? BigInt(neighborhoodId) : null,
-        status: 'PENDING',
+        status: "PENDING",
         description,
         additionalNotes,
         userAddress,
+        price: price ? parseFloat(price) : null,
         userLongitude: userLongitude ? parseFloat(userLongitude) : null,
         userLatitude: userLatitude ? parseFloat(userLatitude) : null,
         phoneNumber,
         deliveryPrice,
-        attachments: attachments && attachments.length > 0 ? {
-          create: attachments.map(att => ({
-            type: att.type,
-            link: att.link
-          }))
-        } : undefined
+        attachments:
+          attachments && attachments.length > 0
+            ? {
+                create: attachments.map((att) => ({
+                  type: att.type,
+                  link: att.link,
+                })),
+              }
+            : undefined,
       },
       include: {
         user: {
           select: {
             id: true,
             userName: true,
-            phoneNumber: true
-          }
+            phoneNumber: true,
+          },
         },
         vendor: {
           select: {
             id: true,
             vendorName: true,
             contactNumber: true,
-            address: true
-          }
+            address: true,
+          },
         },
-        attachments: true
-      }
+        attachments: true,
+      },
     });
 
     // Send notifications to the vendor and the admin
@@ -202,36 +242,59 @@ class OrderService {
         notes: order.additionalNotes,
       };
       await Promise.all([
-        notificationService.notifyNewOrder(vendorId, order.id, tenantId, orderDetails),
-        notificationService.notifyAdminNewVendorOrder(order.id, tenantId, orderDetails),
+        notificationService.notifyNewOrder(
+          vendorId,
+          order.id,
+          tenantId,
+          orderDetails,
+        ),
+        notificationService.notifyAdminNewVendorOrder(
+          order.id,
+          tenantId,
+          orderDetails,
+        ),
       ]);
     } catch (error) {
-      console.error('Failed to send order notifications:', error);
+      console.error("Failed to send order notifications:", error);
     }
     return this.addAttachmentUrls(convertBigIntToString(order));
   }
 
   // Create an admin-initiated order for a specific vendor (no delivery-price requirement)
   async createAdminOrderForVendor(userId, orderData, tenantId, force = false) {
-    const { vendorId, description, additionalNotes, userAddress, userLongitude, userLatitude, phoneNumber, neighborhoodId, attachments, skipApproval, waitingTime } = orderData;
+    const {
+      vendorId,
+      description,
+      additionalNotes,
+      userAddress,
+      userLongitude,
+      userLatitude,
+      phoneNumber,
+      neighborhoodId,
+      attachments,
+      skipApproval,
+      waitingTime,
+    } = orderData;
 
     const vendor = await prisma.vendor.findFirst({
-      where: { id: BigInt(vendorId), tenantId }
+      where: { id: BigInt(vendorId), tenantId },
     });
 
     if (!vendor) {
-      throw new Error('Vendor not found');
+      throw new Error("Vendor not found");
     }
 
-    if (!force && vendor.isOpen !== 'true') {
-      const error = new Error('Vendor is currently closed');
-      error.code = 'VENDOR_CLOSED';
+    if (!force && vendor.isOpen !== "true") {
+      const error = new Error("Vendor is currently closed");
+      error.code = "VENDOR_CLOSED";
       throw error;
     }
 
     if (!force && vendor.isLocked) {
-      const error = new Error('Vendor is currently locked and cannot accept orders');
-      error.code = 'VENDOR_LOCKED';
+      const error = new Error(
+        "Vendor is currently locked and cannot accept orders",
+      );
+      error.code = "VENDOR_LOCKED";
       throw error;
     }
 
@@ -241,7 +304,7 @@ class OrderService {
         userId: userId ? BigInt(userId) : null,
         vendorId: BigInt(vendorId),
         neighborhoodId: neighborhoodId ? BigInt(neighborhoodId) : null,
-        status: skipApproval ? 'COUNTER_OFFER_ACCEPTED' : 'PENDING',
+        status: skipApproval ? "COUNTER_OFFER_ACCEPTED" : "PENDING",
         description,
         additionalNotes,
         userAddress,
@@ -251,37 +314,40 @@ class OrderService {
         deliveryPrice: null,
         waitingTime: waitingTime ? parseInt(waitingTime) : null,
         acceptedByVend: skipApproval ? new Date() : null,
-        attachments: attachments && attachments.length > 0 ? {
-          create: attachments.map(att => ({
-            type: att.type,
-            link: att.link
-          }))
-        } : undefined
+        attachments:
+          attachments && attachments.length > 0
+            ? {
+                create: attachments.map((att) => ({
+                  type: att.type,
+                  link: att.link,
+                })),
+              }
+            : undefined,
       },
       include: {
         user: {
           select: {
             id: true,
             userName: true,
-            phoneNumber: true
-          }
+            phoneNumber: true,
+          },
         },
         vendor: {
           select: {
             id: true,
             vendorName: true,
             contactNumber: true,
-            address: true
-          }
+            address: true,
+          },
         },
         neighborhood: {
           select: {
             id: true,
-            name: true
-          }
+            name: true,
+          },
         },
-        attachments: true
-      }
+        attachments: true,
+      },
     });
 
     // Send notifications to the vendor and the admin
@@ -294,18 +360,37 @@ class OrderService {
 
     try {
       await Promise.all([
-        notificationService.notifyNewOrder(vendorId, order.id, tenantId, orderDetails),
-        notificationService.notifyAdminNewVendorOrder(order.id, tenantId, orderDetails),
+        notificationService.notifyNewOrder(
+          vendorId,
+          order.id,
+          tenantId,
+          orderDetails,
+        ),
+        notificationService.notifyAdminNewVendorOrder(
+          order.id,
+          tenantId,
+          orderDetails,
+        ),
       ]);
     } catch (error) {
-      console.error('Failed to send order notifications:', error);
+      console.error("Failed to send order notifications:", error);
     }
     return this.addAttachmentUrls(convertBigIntToString(order));
   }
 
   // Create order by vendor
   async createByVendor(vendorId, orderData, tenantId) {
-    const { description, additionalNotes, userAddress, userLongitude, userLatitude, phoneNumber, neighborhoodId, price, waitingTime } = orderData;
+    const {
+      description,
+      additionalNotes,
+      userAddress,
+      userLongitude,
+      userLatitude,
+      phoneNumber,
+      neighborhoodId,
+      price,
+      waitingTime,
+    } = orderData;
 
     // // Verify user exists if userId is provided
     // if (userId) {
@@ -328,13 +413,13 @@ class OrderService {
         where: {
           vendorId: BigInt(vendorId),
           neighborhoodId: BigInt(neighborhoodId),
-          tenantId
-        }
+          tenantId,
+        },
       });
       deliveryPrice = pricing ? pricing.price : null;
     }
     if (!deliveryPrice) {
-      throw new Error('Delivery price not found');
+      throw new Error("Delivery price not found");
     }
     // Create order with COUNTER_OFFER_ACCEPTED status for vendor-created orders
     const order = await prisma.order.create({
@@ -343,7 +428,7 @@ class OrderService {
         userId: null,
         vendorId: BigInt(vendorId),
         neighborhoodId: neighborhoodId ? BigInt(neighborhoodId) : null,
-        status: 'COUNTER_OFFER_ACCEPTED', // Vendor orders skip the counter-offer phase
+        status: "COUNTER_OFFER_ACCEPTED", // Vendor orders skip the counter-offer phase
         description,
         additionalNotes,
         userAddress,
@@ -353,35 +438,35 @@ class OrderService {
         deliveryPrice,
         acceptedByVend: new Date(), // Mark as accepted by vendor immediately
         price: price ? price : null,
-        waitingTime: waitingTime ? parseInt(waitingTime) : null
+        waitingTime: waitingTime ? parseInt(waitingTime) : null,
       },
       include: {
         user: {
           select: {
             id: true,
             userName: true,
-            phoneNumber: true
-          }
+            phoneNumber: true,
+          },
         },
         vendor: {
           select: {
             id: true,
             vendorName: true,
             contactNumber: true,
-            address: true
-          }
-        }
-      }
+            address: true,
+          },
+        },
+      },
     });
 
     // Send notifications to all available captains and the admin
     try {
       await Promise.all([
         notificationService.sendToAllAvailableCaptains(
-          'طلب توصيل جديد',
-          'يوجد طلب توصيل جديد متاح. تحقق من التطبيق للقبول.',
-          { orderId: order.id.toString(), type: 'DELIVERY_AVAILABLE' },
-          tenantId
+          "طلب توصيل جديد",
+          "يوجد طلب توصيل جديد متاح. تحقق من التطبيق للقبول.",
+          { orderId: order.id.toString(), type: "DELIVERY_AVAILABLE" },
+          tenantId,
         ),
         notificationService.notifyAdminNewVendorOrder(order.id, tenantId, {
           vendorName: order.vendor?.vendorName,
@@ -389,7 +474,7 @@ class OrderService {
         }),
       ]);
     } catch (error) {
-      console.error('Failed to send order notifications:', error);
+      console.error("Failed to send order notifications:", error);
     }
 
     return convertBigIntToString(order);
@@ -397,7 +482,8 @@ class OrderService {
 
   // Vendor counter offer
   async vendorCounterOffer(orderId, vendorId, counterOfferData, tenantId) {
-    const { description, additionalNotes, price, waitingTime } = counterOfferData;
+    const { description, additionalNotes, price, waitingTime } =
+      counterOfferData;
 
     // Verify order exists and belongs to vendor
     const order = await prisma.order.findFirst({
@@ -405,12 +491,12 @@ class OrderService {
         id: BigInt(orderId),
         vendorId: BigInt(vendorId),
         tenantId,
-        status: 'PENDING'
-      }
+        status: "PENDING",
+      },
     });
 
     if (!order) {
-      throw new Error('Order not found or cannot be modified');
+      throw new Error("Order not found or cannot be modified");
     }
 
     // Update order directly to COUNTER_OFFER_ACCEPTED (skip counter offer step)
@@ -418,36 +504,36 @@ class OrderService {
       where: {
         id_tenantId: {
           id: BigInt(orderId),
-          tenantId
-        }
+          tenantId,
+        },
       },
       data: {
         description,
         additionalNotes,
         price: parseFloat(price),
-        status: 'COUNTER_OFFER_ACCEPTED',
+        status: "COUNTER_OFFER_ACCEPTED",
         counterOfferSentAt: new Date(),
         acceptedByVend: new Date(),
-        waitingTime: waitingTime ? parseInt(waitingTime) : null
+        waitingTime: waitingTime ? parseInt(waitingTime) : null,
       },
       include: {
         user: {
           select: {
             id: true,
             userName: true,
-            phoneNumber: true
-          }
+            phoneNumber: true,
+          },
         },
         vendor: {
           select: {
             id: true,
             vendorName: true,
             contactNumber: true,
-            address: true
-          }
+            address: true,
+          },
         },
-        attachments: true
-      }
+        attachments: true,
+      },
     });
 
     // Send notifications to user and all available captains
@@ -455,23 +541,30 @@ class OrderService {
       try {
         await Promise.all([
           // Notify user that order is accepted with price
-          updatedOrder.userId ? notificationService.sendToUser(
-            updatedOrder.userId,
-            'تمت الموافقة على طلبك',
-            `تمت الموافقة على طلبك بسعر ${price} جنيه، سعر التوصيل ${updatedOrder.deliveryPrice} جنيه. سيتم تعيين كابتن قريباً.`,
-            tenantId,
-            { orderId: orderId.toString(), price: price.toString(), deliveryPrice: updatedOrder.deliveryPrice?.toString(), type: 'ORDER_APPROVED' }
-          ) : Promise.resolve(true),
+          updatedOrder.userId
+            ? notificationService.sendToUser(
+                updatedOrder.userId,
+                "تمت الموافقة على طلبك",
+                `تمت الموافقة على طلبك بسعر ${price} جنيه، سعر التوصيل ${updatedOrder.deliveryPrice} جنيه. سيتم تعيين كابتن قريباً.`,
+                tenantId,
+                {
+                  orderId: orderId.toString(),
+                  price: price.toString(),
+                  deliveryPrice: updatedOrder.deliveryPrice?.toString(),
+                  type: "ORDER_APPROVED",
+                },
+              )
+            : Promise.resolve(true),
           // Notify all available captains
           notificationService.sendToAllAvailableCaptains(
-            'طلب توصيل جديد',
-            'يوجد طلب توصيل جديد متاح. تحقق من التطبيق للقبول.',
-            { orderId: orderId.toString(), type: 'DELIVERY_AVAILABLE' },
-            tenantId
-          )
+            "طلب توصيل جديد",
+            "يوجد طلب توصيل جديد متاح. تحقق من التطبيق للقبول.",
+            { orderId: orderId.toString(), type: "DELIVERY_AVAILABLE" },
+            tenantId,
+          ),
         ]);
       } catch (error) {
-        console.error('Failed to send order approval notifications:', error);
+        console.error("Failed to send order approval notifications:", error);
       }
     });
 
@@ -486,16 +579,18 @@ class OrderService {
         id: BigInt(orderId),
         vendorId: BigInt(vendorId),
         tenantId,
-        status: 'PENDING'
-      }
+        status: "PENDING",
+      },
     });
 
     if (!order) {
-      throw new Error('Order not found or cannot be modified');
+      throw new Error("Order not found or cannot be modified");
     }
 
     if (!order.price) {
-      throw new Error('Order has no price set. Please send an offer with a price instead');
+      throw new Error(
+        "Order has no price set. Please send an offer with a price instead",
+      );
     }
 
     // Update order directly to COUNTER_OFFER_ACCEPTED using the existing price
@@ -503,54 +598,61 @@ class OrderService {
       where: {
         id_tenantId: {
           id: BigInt(orderId),
-          tenantId
-        }
+          tenantId,
+        },
       },
       data: {
-        status: 'COUNTER_OFFER_ACCEPTED',
+        status: "COUNTER_OFFER_ACCEPTED",
         counterOfferSentAt: new Date(),
-        acceptedByVend: new Date()
+        acceptedByVend: new Date(),
       },
       include: {
         user: {
           select: {
             id: true,
             userName: true,
-            phoneNumber: true
-          }
+            phoneNumber: true,
+          },
         },
         vendor: {
           select: {
             id: true,
             vendorName: true,
             contactNumber: true,
-            address: true
-          }
+            address: true,
+          },
         },
-        attachments: true
-      }
+        attachments: true,
+      },
     });
 
     // Send notifications to user and all available captains
     setImmediate(async () => {
       try {
         await Promise.all([
-          updatedOrder.userId ? notificationService.sendToUser(
-            updatedOrder.userId,
-            'تمت الموافقة على طلبك',
-            `تمت الموافقة على طلبك بسعر ${updatedOrder.price} جنيه، سعر التوصيل ${updatedOrder.deliveryPrice} جنيه. سيتم تعيين كابتن قريباً.`,
-            tenantId,
-            { orderId: orderId.toString(), price: updatedOrder.price?.toString(), deliveryPrice: updatedOrder.deliveryPrice?.toString(), type: 'ORDER_APPROVED' }
-          ) : Promise.resolve(true),
+          updatedOrder.userId
+            ? notificationService.sendToUser(
+                updatedOrder.userId,
+                "تمت الموافقة على طلبك",
+                `تمت الموافقة على طلبك بسعر ${updatedOrder.price} جنيه، سعر التوصيل ${updatedOrder.deliveryPrice} جنيه. سيتم تعيين كابتن قريباً.`,
+                tenantId,
+                {
+                  orderId: orderId.toString(),
+                  price: updatedOrder.price?.toString(),
+                  deliveryPrice: updatedOrder.deliveryPrice?.toString(),
+                  type: "ORDER_APPROVED",
+                },
+              )
+            : Promise.resolve(true),
           notificationService.sendToAllAvailableCaptains(
-            'طلب توصيل جديد',
-            'يوجد طلب توصيل جديد متاح. تحقق من التطبيق للقبول.',
-            { orderId: orderId.toString(), type: 'DELIVERY_AVAILABLE' },
-            tenantId
-          )
+            "طلب توصيل جديد",
+            "يوجد طلب توصيل جديد متاح. تحقق من التطبيق للقبول.",
+            { orderId: orderId.toString(), type: "DELIVERY_AVAILABLE" },
+            tenantId,
+          ),
         ]);
       } catch (error) {
-        console.error('Failed to send order approval notifications:', error);
+        console.error("Failed to send order approval notifications:", error);
       }
     });
 
@@ -565,12 +667,12 @@ class OrderService {
         id: BigInt(orderId),
         userId: BigInt(userId),
         tenantId,
-        status: 'COUNTER_OFFER_SENT'
-      }
+        status: "COUNTER_OFFER_SENT",
+      },
     });
 
     if (!order) {
-      throw new Error('Order not found or cannot be approved');
+      throw new Error("Order not found or cannot be approved");
     }
 
     // Update order status
@@ -578,37 +680,41 @@ class OrderService {
       where: {
         id_tenantId: {
           id: BigInt(orderId),
-          tenantId
-        }
+          tenantId,
+        },
       },
       data: {
-        status: 'COUNTER_OFFER_ACCEPTED',
-        acceptedByVend: new Date()
+        status: "COUNTER_OFFER_ACCEPTED",
+        acceptedByVend: new Date(),
       },
       include: {
         user: {
           select: {
             id: true,
             userName: true,
-            phoneNumber: true
-          }
+            phoneNumber: true,
+          },
         },
         vendor: {
           select: {
             id: true,
             vendorName: true,
             contactNumber: true,
-            address: true
-          }
-        }
-      }
+            address: true,
+          },
+        },
+      },
     });
 
     // Send notifications to vendor and all available captains
     try {
-      await notificationService.notifyOrderApproved(updatedOrder.vendorId, orderId, tenantId);
+      await notificationService.notifyOrderApproved(
+        updatedOrder.vendorId,
+        orderId,
+        tenantId,
+      );
     } catch (error) {
-      console.error('Failed to send order approval notifications:', error);
+      console.error("Failed to send order approval notifications:", error);
     }
 
     return convertBigIntToString(updatedOrder);
@@ -621,15 +727,15 @@ class OrderService {
         where: {
           id_tenantId: {
             id: BigInt(captainId),
-            tenantId
-          }
+            tenantId,
+          },
         },
         select: {
           isAvailable: true,
           currentNumberOfOrders: true,
           maxCurrentOrders: true,
-          userName: true
-        }
+          userName: true,
+        },
       });
 
       // if (!captain || !captain.isAvailable) {
@@ -638,7 +744,7 @@ class OrderService {
 
       // Check if captain can take more orders
       if (captain.currentNumberOfOrders >= captain.maxCurrentOrders) {
-        throw new Error('Captain has reached maximum order capacity');
+        throw new Error("Captain has reached maximum order capacity");
       }
 
       // Check if this is a special order and deliveryPrice is required
@@ -646,30 +752,30 @@ class OrderService {
         where: {
           id: BigInt(orderId),
           tenantId,
-          status: 'COUNTER_OFFER_ACCEPTED',
-          captainId: null
+          status: "COUNTER_OFFER_ACCEPTED",
+          captainId: null,
         },
         select: {
           vendorId: true,
-          userId: true
-        }
+          userId: true,
+        },
       });
 
       if (!existingOrder) {
-        throw new Error('Order not found or not available for pickup');
+        throw new Error("Order not found or not available for pickup");
       }
 
-      const isSpecialOrder = existingOrder.vendorId.toString() === '-1';
+      const isSpecialOrder = existingOrder.vendorId.toString() === "-1";
 
       // For special orders, deliveryPrice is required
       if (isSpecialOrder && !deliveryPrice) {
-        throw new Error('Delivery price is required for special orders');
+        throw new Error("Delivery price is required for special orders");
       }
 
       // Update order with delivery price if it's a special order
       const updateData = {
         captainId: BigInt(captainId),
-        status: 'ACCEPTED_BY_CAPTAIN',
+        status: "ACCEPTED_BY_CAPTAIN",
         acceptedByCapta: new Date(),
       };
 
@@ -681,14 +787,14 @@ class OrderService {
         where: {
           id: BigInt(orderId),
           tenantId,
-          status: 'COUNTER_OFFER_ACCEPTED',
+          status: "COUNTER_OFFER_ACCEPTED",
           captainId: null,
         },
         data: updateData,
       });
 
       if (updatedOrder.count === 0) {
-        throw new Error('Order not found or not available for pickup');
+        throw new Error("Order not found or not available for pickup");
       }
 
       // Atomically increment currentNumberOfOrders
@@ -698,20 +804,18 @@ class OrderService {
         where: {
           id_tenantId: {
             id: BigInt(captainId),
-            tenantId
-          }
+            tenantId,
+          },
         },
         data: {
-          currentNumberOfOrders: { increment: 1 }
+          currentNumberOfOrders: { increment: 1 },
         },
       });
 
       // Update cache with new currentNumberOfOrders
-      updateCaptainOrderCountsInCache(
-        captainId.toString(),
-        tenantId,
-        { currentNumberOfOrders: newCurrentOrders }
-      );
+      updateCaptainOrderCountsInCache(captainId.toString(), tenantId, {
+        currentNumberOfOrders: newCurrentOrders,
+      });
 
       // Notifications can safely happen after commit
       setImmediate(async () => {
@@ -720,18 +824,30 @@ class OrderService {
             // For special orders, notify admin and user
             await Promise.all([
               notificationService.sendToAdmin(
-                'تم قبول طلب خاص',
+                "تم قبول طلب خاص",
                 `الكابتن ${captain.userName} قبل الطلب الخاص رقم ${orderId} بسعر توصيل ${deliveryPrice} جنيه.`,
-                { orderId: orderId.toString(), captainId: captainId.toString(), deliveryPrice: deliveryPrice.toString(), type: 'SPECIAL_ORDER_ACCEPTED' },
-                tenantId
-              ),
-              existingOrder.userId ? notificationService.sendToUser(
-                existingOrder.userId,
-                'تم تعيين كابتن',
-                `تم تعيين كابتن لطلبك الخاص بسعر توصيل ${deliveryPrice} جنيه. الكابتن في الطريق إليك.`,
+                {
+                  orderId: orderId.toString(),
+                  captainId: captainId.toString(),
+                  deliveryPrice: deliveryPrice.toString(),
+                  type: "SPECIAL_ORDER_ACCEPTED",
+                },
                 tenantId,
-                { orderId: orderId.toString(), captainId: captainId.toString(), deliveryPrice: deliveryPrice.toString(), type: 'CAPTAIN_ASSIGNED' }
-              ) : Promise.resolve(true)
+              ),
+              existingOrder.userId
+                ? notificationService.sendToUser(
+                    existingOrder.userId,
+                    "تم تعيين كابتن",
+                    `تم تعيين كابتن لطلبك الخاص بسعر توصيل ${deliveryPrice} جنيه. الكابتن في الطريق إليك.`,
+                    tenantId,
+                    {
+                      orderId: orderId.toString(),
+                      captainId: captainId.toString(),
+                      deliveryPrice: deliveryPrice.toString(),
+                      type: "CAPTAIN_ASSIGNED",
+                    },
+                  )
+                : Promise.resolve(true),
             ]);
           } else {
             // Regular order notifications
@@ -740,11 +856,14 @@ class OrderService {
               existingOrder.userId,
               orderId,
               captainId,
-              tenantId
+              tenantId,
             );
           }
         } catch (error) {
-          console.error('Failed to send captain acceptance notifications:', error);
+          console.error(
+            "Failed to send captain acceptance notifications:",
+            error,
+          );
         }
       });
 
@@ -770,8 +889,8 @@ class OrderService {
               id: true,
               vendorName: true,
               contactNumber: true,
-              address: true
-            }
+              address: true,
+            },
           },
           captain: {
             select: {
@@ -780,19 +899,21 @@ class OrderService {
               phoneNumber: true,
               longitude: true,
               latitude: true,
-              photo: true
-            }
+              photo: true,
+            },
           },
-          attachments: true
+          attachments: true,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
-        take: parseInt(limit)
+        take: parseInt(limit),
       }),
-      prisma.order.count({ where: whereClause })
+      prisma.order.count({ where: whereClause }),
     ]);
 
-    let ordersWithUrls = this.addAttachmentUrlsToArray(convertBigIntToString(orders));
+    let ordersWithUrls = this.addAttachmentUrlsToArray(
+      convertBigIntToString(orders),
+    );
     ordersWithUrls = this.addCaptainUrlsToArray(ordersWithUrls);
 
     return {
@@ -801,8 +922,8 @@ class OrderService {
         page: parseInt(page),
         limit: parseInt(limit),
         total,
-        pages: Math.ceil(total / limit)
-      }
+        pages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -824,8 +945,8 @@ class OrderService {
               id: true,
               userName: true,
               phoneNumber: true,
-              address: true
-            }
+              address: true,
+            },
           },
           captain: {
             select: {
@@ -833,25 +954,27 @@ class OrderService {
               userName: true,
               phoneNumber: true,
               longitude: true,
-              latitude: true
-            }
+              latitude: true,
+            },
           },
           neighborhood: {
             select: {
               id: true,
-              name: true
-            }
+              name: true,
+            },
           },
-          attachments: true
+          attachments: true,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
-        take: parseInt(limit)
+        take: parseInt(limit),
       }),
-      prisma.order.count({ where: whereClause })
+      prisma.order.count({ where: whereClause }),
     ]);
 
-    const ordersWithUrls = this.addAttachmentUrlsToArray(convertBigIntToString(orders));
+    const ordersWithUrls = this.addAttachmentUrlsToArray(
+      convertBigIntToString(orders),
+    );
 
     return {
       orders: ordersWithUrls,
@@ -859,8 +982,8 @@ class OrderService {
         page: parseInt(page),
         limit: parseInt(limit),
         total,
-        pages: Math.ceil(total / limit)
-      }
+        pages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -882,8 +1005,8 @@ class OrderService {
               id: true,
               userName: true,
               phoneNumber: true,
-              address: true
-            }
+              address: true,
+            },
           },
           vendor: {
             select: {
@@ -892,25 +1015,27 @@ class OrderService {
               contactNumber: true,
               longitude: true,
               latitude: true,
-              address: true
-            }
+              address: true,
+            },
           },
           neighborhood: {
             select: {
               id: true,
-              name: true
-            }
+              name: true,
+            },
           },
-          attachments: true
+          attachments: true,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
-        take: parseInt(limit)
+        take: parseInt(limit),
       }),
-      prisma.order.count({ where: whereClause })
+      prisma.order.count({ where: whereClause }),
     ]);
 
-    const ordersWithUrls = this.addAttachmentUrlsToArray(convertBigIntToString(orders));
+    const ordersWithUrls = this.addAttachmentUrlsToArray(
+      convertBigIntToString(orders),
+    );
 
     return {
       orders: ordersWithUrls,
@@ -918,8 +1043,8 @@ class OrderService {
         page: parseInt(page),
         limit: parseInt(limit),
         total,
-        pages: Math.ceil(total / limit)
-      }
+        pages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -931,8 +1056,8 @@ class OrderService {
       prisma.order.findMany({
         where: {
           tenantId,
-          status: 'COUNTER_OFFER_ACCEPTED',
-          captainId: null
+          status: "COUNTER_OFFER_ACCEPTED",
+          captainId: null,
         },
         include: {
           user: {
@@ -940,39 +1065,41 @@ class OrderService {
               id: true,
               userName: true,
               phoneNumber: true,
-              address: true
-            }
+              address: true,
+            },
           },
           vendor: {
             select: {
               id: true,
               vendorName: true,
               contactNumber: true,
-              address: true
-            }
+              address: true,
+            },
           },
           neighborhood: {
             select: {
               id: true,
-              name: true
-            }
+              name: true,
+            },
           },
-          attachments: true
+          attachments: true,
         },
-        orderBy: { createdAt: 'asc' },
+        orderBy: { createdAt: "asc" },
         skip,
-        take: parseInt(limit)
+        take: parseInt(limit),
       }),
       prisma.order.count({
         where: {
           tenantId,
-          status: 'COUNTER_OFFER_ACCEPTED',
-          captainId: null
-        }
-      })
+          status: "COUNTER_OFFER_ACCEPTED",
+          captainId: null,
+        },
+      }),
     ]);
 
-    const ordersWithUrls = this.addAttachmentUrlsToArray(convertBigIntToString(orders));
+    const ordersWithUrls = this.addAttachmentUrlsToArray(
+      convertBigIntToString(orders),
+    );
 
     return {
       orders: ordersWithUrls,
@@ -980,8 +1107,8 @@ class OrderService {
         page: parseInt(page),
         limit: parseInt(limit),
         total,
-        pages: Math.ceil(total / limit)
-      }
+        pages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -990,7 +1117,7 @@ class OrderService {
     const order = await prisma.order.findFirst({
       where: {
         id: BigInt(orderId),
-        tenantId
+        tenantId,
       },
       include: {
         user: {
@@ -998,16 +1125,16 @@ class OrderService {
             id: true,
             userName: true,
             phoneNumber: true,
-            address: true
-          }
+            address: true,
+          },
         },
         vendor: {
           select: {
             id: true,
             vendorName: true,
             contactNumber: true,
-            address: true
-          }
+            address: true,
+          },
         },
         captain: {
           select: {
@@ -1018,34 +1145,38 @@ class OrderService {
             latitude: true,
             ratingSum: true,
             ratingCount: true,
-          }
+          },
         },
         neighborhood: {
           select: {
             id: true,
-            name: true
-          }
+            name: true,
+          },
         },
-        attachments: true
-      }
+        attachments: true,
+      },
     });
 
     if (!order) {
-      throw new Error('Order not found');
+      throw new Error("Order not found");
     }
 
     // Get cached location
     if (order.captain) {
-      const captainLocation = await getCaptainLocation(order.captain.id, tenantId);
+      const captainLocation = await getCaptainLocation(
+        order.captain.id,
+        tenantId,
+      );
       order.captain.longitude = captainLocation.longitude;
       order.captain.latitude = captainLocation.latitude;
     }
 
     // Calculate captain rating if captain exists
     if (order.captain) {
-      order.captain.rating = order.captain.ratingCount > 0
-        ? order.captain.ratingSum / order.captain.ratingCount
-        : 5.0;
+      order.captain.rating =
+        order.captain.ratingCount > 0
+          ? order.captain.ratingSum / order.captain.ratingCount
+          : 5.0;
     }
 
     const orderResponse = convertBigIntToString(order);
@@ -1061,21 +1192,21 @@ class OrderService {
           {
             id: BigInt(orderId),
             vendorId: BigInt(vendorId),
-            status: 'PENDING',
-            tenantId
+            status: "PENDING",
+            tenantId,
           },
-          {            
+          {
             id: BigInt(orderId),
             vendorId: BigInt(vendorId),
-            status: 'COUNTER_OFFER_ACCEPTED',
-            tenantId
-          }
-        ]
-      }
+            status: "COUNTER_OFFER_ACCEPTED",
+            tenantId,
+          },
+        ],
+      },
     });
 
     if (!order) {
-      throw new Error('Order not found or cannot be rejected');
+      throw new Error("Order not found or cannot be rejected");
     }
 
     // Update order status
@@ -1083,27 +1214,27 @@ class OrderService {
       where: {
         id_tenantId: {
           id: BigInt(orderId),
-          tenantId
-        }
+          tenantId,
+        },
       },
-      data: { status: 'CANCELLED' },
+      data: { status: "CANCELLED" },
       include: {
         user: {
           select: {
             id: true,
             userName: true,
-            phoneNumber: true
-          }
+            phoneNumber: true,
+          },
         },
         vendor: {
           select: {
             id: true,
             vendorName: true,
             contactNumber: true,
-            address: true
-          }
-        }
-      }
+            address: true,
+          },
+        },
+      },
     });
 
     // Send notification to user about order rejection
@@ -1111,13 +1242,13 @@ class OrderService {
       if (updatedOrder.userId) {
         await notificationService.sendToUser(
           updatedOrder.userId,
-          'تم رفض طلبك',
+          "تم رفض طلبك",
           `تم رفض طلبك من قبل ${updatedOrder.vendor.vendorName}. يمكنك تقديم طلب جديد أو تجربة تاجر آخر.`,
-          { orderId: orderId.toString(), type: 'ORDER_REJECTED' }
+          { orderId: orderId.toString(), type: "ORDER_REJECTED" },
         );
       }
     } catch (error) {
-      console.error('Failed to send order rejection notification:', error);
+      console.error("Failed to send order rejection notification:", error);
     }
 
     return convertBigIntToString(updatedOrder);
@@ -1131,12 +1262,12 @@ class OrderService {
         id: BigInt(orderId),
         userId: BigInt(userId),
         tenantId,
-        status: 'DELIVERED'
-      }
+        status: "DELIVERED",
+      },
     });
 
     if (!order) {
-      throw new Error('Order not found or cannot be finalized');
+      throw new Error("Order not found or cannot be finalized");
     }
 
     // Update order status
@@ -1144,37 +1275,37 @@ class OrderService {
       where: {
         id_tenantId: {
           id: BigInt(orderId),
-          tenantId
-        }
+          tenantId,
+        },
       },
       data: {
-        finalizedAt: new Date()
+        finalizedAt: new Date(),
       },
       include: {
         user: {
           select: {
             id: true,
             userName: true,
-            phoneNumber: true
-          }
+            phoneNumber: true,
+          },
         },
         vendor: {
           select: {
             id: true,
             vendorName: true,
             contactNumber: true,
-            address: true
-          }
+            address: true,
+          },
         },
         captain: {
           select: {
             id: true,
             userName: true,
             phoneNumber: true,
-            currentLocation: true
-          }
-        }
-      }
+            currentLocation: true,
+          },
+        },
+      },
     });
 
     return convertBigIntToString(updatedOrder);
@@ -1189,19 +1320,19 @@ class OrderService {
         where: {
           id: BigInt(orderId),
           captainId: BigInt(captainId),
-          status: 'ACCEPTED_BY_CAPTAIN',
-          tenantId
+          status: "ACCEPTED_BY_CAPTAIN",
+          tenantId,
         },
         select: {
           id: true,
           deliveryPrice: true,
           userId: true,
-          vendorId: true
-        }
+          vendorId: true,
+        },
       });
 
       if (!order) {
-        throw new Error('Order not found or cannot be marked as delivered');
+        throw new Error("Order not found or cannot be marked as delivered");
       }
 
       // Update order status
@@ -1209,28 +1340,28 @@ class OrderService {
         where: {
           id_tenantId: {
             id: BigInt(orderId),
-            tenantId
-          }
+            tenantId,
+          },
         },
         data: {
-          status: 'DELIVERED',
-          deliveredAt: new Date()
+          status: "DELIVERED",
+          deliveredAt: new Date(),
         },
         include: {
           user: {
             select: {
               id: true,
               userName: true,
-              phoneNumber: true
-            }
+              phoneNumber: true,
+            },
           },
           vendor: {
             select: {
               id: true,
               vendorName: true,
               contactNumber: true,
-              address: true
-            }
+              address: true,
+            },
           },
           captain: {
             select: {
@@ -1238,10 +1369,10 @@ class OrderService {
               userName: true,
               phoneNumber: true,
               longitude: true,
-              latitude: true
-            }
-          }
-        }
+              latitude: true,
+            },
+          },
+        },
       });
 
       // Update captain: decrement orders and add earnings
@@ -1250,19 +1381,19 @@ class OrderService {
         where: {
           id_tenantId: {
             id: BigInt(captainId),
-            tenantId
-          }
+            tenantId,
+          },
         },
         data: {
           currentNumberOfOrders: { decrement: 1 },
-          earningSinceLastActivation: { increment: deliveryPrice }
+          earningSinceLastActivation: { increment: deliveryPrice },
         },
         select: {
           currentNumberOfOrders: true,
           earningSinceLastActivation: true,
           maxEarningsSinceLastActivation: true,
-          userName: true
-        }
+          userName: true,
+        },
       });
 
       return { updatedOrder, deliveryPrice, updatedCaptain };
@@ -1270,18 +1401,18 @@ class OrderService {
 
     // Update cache with new currentNumberOfOrders
     const newCurrentOrders = result.updatedCaptain.currentNumberOfOrders;
-    updateCaptainOrderCountsInCache(
-      captainId.toString(),
-      tenantId,
-      { currentNumberOfOrders: newCurrentOrders }
-    );
+    updateCaptainOrderCountsInCache(captainId.toString(), tenantId, {
+      currentNumberOfOrders: newCurrentOrders,
+    });
 
     // After transaction, check earnings and handle locking/notifications
     const captain = result.updatedCaptain;
 
     if (captain) {
       const newEarnings = parseFloat(captain.earningSinceLastActivation || 0);
-      const maxEarnings = parseFloat(captain.maxEarningsSinceLastActivation || 0);
+      const maxEarnings = parseFloat(
+        captain.maxEarningsSinceLastActivation || 0,
+      );
       const exceededMaxEarnings = maxEarnings > 0 && newEarnings >= maxEarnings;
 
       if (exceededMaxEarnings) {
@@ -1293,12 +1424,12 @@ class OrderService {
             where: {
               id_tenantId: {
                 id: BigInt(captainId),
-                tenantId
-              }
+                tenantId,
+              },
             },
             data: {
-              isLocked: true
-            }
+              isLocked: true,
+            },
           });
           updateCaptainLockInCache(captainId, tenantId, true);
         }
@@ -1306,9 +1437,13 @@ class OrderService {
         // Send max earnings notifications
         setImmediate(async () => {
           try {
-            await notificationService.notifyMaxEarningsExceeded(captainId, captain.userName, tenantId);
+            await notificationService.notifyMaxEarningsExceeded(
+              captainId,
+              captain.userName,
+              tenantId,
+            );
           } catch (error) {
-            console.error('Failed to send max earnings notification:', error);
+            console.error("Failed to send max earnings notification:", error);
           }
         });
       }
@@ -1317,9 +1452,13 @@ class OrderService {
     // Send delivery notification
     setImmediate(async () => {
       try {
-        await notificationService.notifyOrderDelivered(result.updatedOrder.userId, orderId, tenantId);
+        await notificationService.notifyOrderDelivered(
+          result.updatedOrder.userId,
+          orderId,
+          tenantId,
+        );
       } catch (error) {
-        console.error('Failed to send delivery notification:', error);
+        console.error("Failed to send delivery notification:", error);
       }
     });
 
@@ -1333,26 +1472,30 @@ class OrderService {
       where: {
         id: BigInt(orderId),
         captainId: BigInt(captainId),
-        status: 'ACCEPTED_BY_CAPTAIN',
-        tenantId
-      }
+        status: "ACCEPTED_BY_CAPTAIN",
+        tenantId,
+      },
     });
 
     if (!order) {
-      throw new Error('Order not found or not assigned to this captain');
+      throw new Error("Order not found or not assigned to this captain");
     }
 
     // Send notification to user about captain arrival
     try {
-      await notificationService.notifyCaptainArrived(order.userId, orderId, tenantId);
+      await notificationService.notifyCaptainArrived(
+        order.userId,
+        orderId,
+        tenantId,
+      );
     } catch (error) {
-      console.error('Failed to send captain arrival notification:', error);
+      console.error("Failed to send captain arrival notification:", error);
     }
 
     return {
       success: true,
-      message: 'User notified about captain arrival',
-      orderId: orderId.toString()
+      message: "User notified about captain arrival",
+      orderId: orderId.toString(),
     };
   }
 
@@ -1364,13 +1507,13 @@ class OrderService {
         id: BigInt(orderId),
         userId: BigInt(userId),
         tenantId,
-        status: 'DELIVERED',
-        captainId: { not: null }
-      }
+        status: "DELIVERED",
+        captainId: { not: null },
+      },
     });
 
     if (!order) {
-      throw new Error('Order not found or cannot be rated');
+      throw new Error("Order not found or cannot be rated");
     }
 
     const ratingValue = parseFloat(rating);
@@ -1380,20 +1523,20 @@ class OrderService {
       where: {
         id_tenantId: {
           id: order.captainId,
-          tenantId
-        }
+          tenantId,
+        },
       },
       data: {
         ratingSum: { increment: ratingValue },
-        ratingCount: { increment: 1 }
+        ratingCount: { increment: 1 },
       },
       select: {
         id: true,
         userName: true,
         phoneNumber: true,
         ratingSum: true,
-        ratingCount: true
-      }
+        ratingCount: true,
+      },
     });
 
     // Mark order as rated
@@ -1401,20 +1544,21 @@ class OrderService {
       where: {
         id_tenantId: {
           id: BigInt(orderId),
-          tenantId
-        }
+          tenantId,
+        },
       },
-      data: { isRated: true }
+      data: { isRated: true },
     });
 
     // Calculate current rating
-    const currentRating = updatedCaptain.ratingCount > 0
-      ? updatedCaptain.ratingSum / updatedCaptain.ratingCount
-      : 5.0;
+    const currentRating =
+      updatedCaptain.ratingCount > 0
+        ? updatedCaptain.ratingSum / updatedCaptain.ratingCount
+        : 5.0;
 
     return convertBigIntToString({
       ...updatedCaptain,
-      currentRating
+      currentRating,
     });
   }
 
@@ -1425,13 +1569,13 @@ class OrderService {
       where: {
         id: BigInt(orderId),
         captainId: BigInt(captainId),
-        status: 'ACCEPTED_BY_CAPTAIN',
-        tenantId
-      }
+        status: "ACCEPTED_BY_CAPTAIN",
+        tenantId,
+      },
     });
 
     if (!order) {
-      throw new Error('Order not found or cannot start delivery');
+      throw new Error("Order not found or cannot start delivery");
     }
 
     // Update order status
@@ -1439,35 +1583,35 @@ class OrderService {
       where: {
         id_tenantId: {
           id: BigInt(orderId),
-          tenantId
-        }
+          tenantId,
+        },
       },
-      data: { status: 'IN_DELIVERY' },
+      data: { status: "IN_DELIVERY" },
       include: {
         user: {
           select: {
             id: true,
             userName: true,
-            phoneNumber: true
-          }
+            phoneNumber: true,
+          },
         },
         vendor: {
           select: {
             id: true,
             vendorName: true,
             contactNumber: true,
-            address: true
-          }
+            address: true,
+          },
         },
         captain: {
           select: {
             id: true,
             userName: true,
             phoneNumber: true,
-            currentLocation: true
-          }
-        }
-      }
+            currentLocation: true,
+          },
+        },
+      },
     });
 
     return convertBigIntToString(updatedOrder);
@@ -1484,13 +1628,13 @@ class OrderService {
         userId: BigInt(userId),
         tenantId,
         status: {
-          in: ['PENDING', 'COUNTER_OFFER_SENT', 'COUNTER_OFFER_ACCEPTED'],
+          in: ["PENDING", "COUNTER_OFFER_SENT", "COUNTER_OFFER_ACCEPTED"],
         },
       },
     });
 
     if (!order) {
-      throw new Error('Order not found or cannot be cancelled');
+      throw new Error("Order not found or cannot be cancelled");
     }
 
     // Mark as cancelled (keep the row for history/stats) instead of deleting it
@@ -1498,19 +1642,23 @@ class OrderService {
       where: {
         id_tenantId: {
           id: BigInt(orderId),
-          tenantId
-        }
+          tenantId,
+        },
       },
-      data: { status: 'CANCELLED' }
+      data: { status: "CANCELLED" },
     });
 
     // Notify vendor of the cancellation
     try {
       if (order.vendorId && order.vendorId !== BigInt(-1)) {
-        await notificationService.notifyOrderCancelled(order.vendorId, orderId, tenantId);
+        await notificationService.notifyOrderCancelled(
+          order.vendorId,
+          orderId,
+          tenantId,
+        );
       }
     } catch (error) {
-      console.error('Failed to send order cancellation notification:', error);
+      console.error("Failed to send order cancellation notification:", error);
     }
 
     return convertBigIntToString(updatedOrder);
@@ -1518,12 +1666,23 @@ class OrderService {
 
   // Get order statistics
   async getOrderStats(tenantId) {
-    const [totalOrders, pendingOrders, inDeliveryOrders, deliveredOrders, cancelledOrders] = await Promise.all([
+    const [
+      totalOrders,
+      pendingOrders,
+      inDeliveryOrders,
+      deliveredOrders,
+      cancelledOrders,
+    ] = await Promise.all([
       prisma.order.count({ where: { tenantId } }),
-      prisma.order.count({ where: { status: 'PENDING', tenantId } }),
-      prisma.order.count({ where: { status: 'IN_DELIVERY', tenantId } }),
-      prisma.order.count({ where: { status: 'DELIVERED', tenantId } }),
-      prisma.order.count({ where: { status: { in: ['CANCELLED', 'REJECTED_BY_VENDOR'] }, tenantId } })
+      prisma.order.count({ where: { status: "PENDING", tenantId } }),
+      prisma.order.count({ where: { status: "IN_DELIVERY", tenantId } }),
+      prisma.order.count({ where: { status: "DELIVERED", tenantId } }),
+      prisma.order.count({
+        where: {
+          status: { in: ["CANCELLED", "REJECTED_BY_VENDOR"] },
+          tenantId,
+        },
+      }),
     ]);
 
     return {
@@ -1532,12 +1691,22 @@ class OrderService {
       inDeliveryOrders,
       deliveredOrders,
       cancelledOrders,
-      completionRate: totalOrders > 0 ? (deliveredOrders / totalOrders * 100).toFixed(2) : 0
+      completionRate:
+        totalOrders > 0
+          ? ((deliveredOrders / totalOrders) * 100).toFixed(2)
+          : 0,
     };
   }
 
   // Get all orders for admin with filters
-  async getAllOrders(tenantId, page = 1, limit = 10, status = null, startDate = null, endDate = null) {
+  async getAllOrders(
+    tenantId,
+    page = 1,
+    limit = 10,
+    status = null,
+    startDate = null,
+    endDate = null,
+  ) {
     const skip = (page - 1) * limit;
 
     // Build where clause
@@ -1545,8 +1714,12 @@ class OrderService {
 
     // Add status filter if provided (supports comma-separated multiple statuses)
     if (status) {
-      const statuses = status.split(',').map(s => s.trim()).filter(Boolean);
-      whereClause.status = statuses.length === 1 ? statuses[0] : { in: statuses };
+      const statuses = status
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      whereClause.status =
+        statuses.length === 1 ? statuses[0] : { in: statuses };
     }
 
     // Add date range filter if provided
@@ -1572,16 +1745,16 @@ class OrderService {
               id: true,
               userName: true,
               phoneNumber: true,
-              email: true
-            }
+              email: true,
+            },
           },
           vendor: {
             select: {
               id: true,
               vendorName: true,
               contactNumber: true,
-              address: true
-            }
+              address: true,
+            },
           },
           captain: {
             select: {
@@ -1593,26 +1766,28 @@ class OrderService {
               currentNumberOfOrders: true,
               maxCurrentOrders: true,
               earningSinceLastActivation: true,
-              maxEarningsSinceLastActivation: true
-            }
+              maxEarningsSinceLastActivation: true,
+            },
           },
           neighborhood: {
             select: {
               id: true,
-              name: true
-            }
+              name: true,
+            },
           },
-          attachments: true
+          attachments: true,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
-        take: parseInt(limit)
+        take: parseInt(limit),
       }),
-      prisma.order.count({ where: whereClause })
+      prisma.order.count({ where: whereClause }),
     ]);
 
     // Convert BigInt to string and add signed URLs for attachments
-    const ordersWithUrls = this.addAttachmentUrlsToArray(convertBigIntToString(orders));
+    const ordersWithUrls = this.addAttachmentUrlsToArray(
+      convertBigIntToString(orders),
+    );
 
     return {
       orders: ordersWithUrls,
@@ -1620,8 +1795,8 @@ class OrderService {
         page: parseInt(page),
         limit: parseInt(limit),
         total,
-        pages: Math.ceil(total / limit)
-      }
+        pages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -1632,26 +1807,28 @@ class OrderService {
       where: {
         id: BigInt(orderId),
         tenantId,
-        status: { notIn: ['DELIVERED', 'CANCELLED', 'REJECTED_BY_VENDOR'] }
+        status: { notIn: ["DELIVERED", "CANCELLED", "REJECTED_BY_VENDOR"] },
       },
       include: {
         user: {
           select: {
             id: true,
-            userName: true
-          }
+            userName: true,
+          },
         },
         captain: {
           select: {
             id: true,
-            userName: true
-          }
-        }
-      }
+            userName: true,
+          },
+        },
+      },
     });
 
     if (!order) {
-      throw new Error('Order not found or cannot be modified (already delivered/cancelled)');
+      throw new Error(
+        "Order not found or cannot be modified (already delivered/cancelled)",
+      );
     }
 
     const oldDeliveryPrice = order.deliveryPrice;
@@ -1661,19 +1838,19 @@ class OrderService {
       where: {
         id_tenantId: {
           id: BigInt(orderId),
-          tenantId
-        }
+          tenantId,
+        },
       },
       data: {
-        deliveryPrice: parseFloat(newDeliveryPrice)
+        deliveryPrice: parseFloat(newDeliveryPrice),
       },
       include: {
         user: {
           select: {
             id: true,
             userName: true,
-            phoneNumber: true
-          }
+            phoneNumber: true,
+          },
         },
         captain: {
           select: {
@@ -1685,11 +1862,11 @@ class OrderService {
             currentNumberOfOrders: true,
             maxCurrentOrders: true,
             earningSinceLastActivation: true,
-            maxEarningsSinceLastActivation: true
-          }
+            maxEarningsSinceLastActivation: true,
+          },
         },
-        attachments: true
-      }
+        attachments: true,
+      },
     });
 
     // Send notifications to user and captain
@@ -1697,24 +1874,40 @@ class OrderService {
       try {
         await Promise.all([
           // Notify captain
-          order.captain ? notificationService.sendToCaptain(
-            order.captain.id,
-            'تم تغيير سعر التوصيل',
-            `تم تغيير سعر التوصيل للطلب رقم ${orderId} من ${oldDeliveryPrice} جنيه إلى ${newDeliveryPrice} جنيه من قبل المدير.`,
-            tenantId,
-            { orderId: orderId.toString(), oldDeliveryPrice: oldDeliveryPrice?.toString(), newDeliveryPrice: newDeliveryPrice.toString(), type: 'DELIVERY_PRICE_CHANGED' }
-          ) : Promise.resolve(true),
+          order.captain
+            ? notificationService.sendToCaptain(
+                order.captain.id,
+                "تم تغيير سعر التوصيل",
+                `تم تغيير سعر التوصيل للطلب رقم ${orderId} من ${oldDeliveryPrice} جنيه إلى ${newDeliveryPrice} جنيه من قبل المدير.`,
+                tenantId,
+                {
+                  orderId: orderId.toString(),
+                  oldDeliveryPrice: oldDeliveryPrice?.toString(),
+                  newDeliveryPrice: newDeliveryPrice.toString(),
+                  type: "DELIVERY_PRICE_CHANGED",
+                },
+              )
+            : Promise.resolve(true),
           // Notify user
-          order.user ? notificationService.sendToUser(
-            order.user.id,
-            'تم تحديث سعر التوصيل',
-            `تم تحديث سعر التوصيل لطلبك الخاص رقم ${orderId} إلى ${newDeliveryPrice} جنيه.`,
-            tenantId,
-            { orderId: orderId.toString(), newDeliveryPrice: newDeliveryPrice.toString(), type: 'DELIVERY_PRICE_UPDATED' }
-          ) : Promise.resolve(true)
+          order.user
+            ? notificationService.sendToUser(
+                order.user.id,
+                "تم تحديث سعر التوصيل",
+                `تم تحديث سعر التوصيل لطلبك الخاص رقم ${orderId} إلى ${newDeliveryPrice} جنيه.`,
+                tenantId,
+                {
+                  orderId: orderId.toString(),
+                  newDeliveryPrice: newDeliveryPrice.toString(),
+                  type: "DELIVERY_PRICE_UPDATED",
+                },
+              )
+            : Promise.resolve(true),
         ]);
       } catch (error) {
-        console.error('Failed to send delivery price change notifications:', error);
+        console.error(
+          "Failed to send delivery price change notifications:",
+          error,
+        );
       }
     });
 
@@ -1725,10 +1918,11 @@ class OrderService {
   async releaseCaptain(orderId, tenantId) {
     return await prisma.$transaction(async (tx) => {
       const order = await tx.order.findFirst({
-        where: { id: BigInt(orderId), tenantId, status: 'ACCEPTED_BY_CAPTAIN' },
+        where: { id: BigInt(orderId), tenantId, status: "ACCEPTED_BY_CAPTAIN" },
         select: { id: true, captainId: true, userId: true, vendorId: true },
       });
-      if (!order) throw new Error('Order not found or not in ACCEPTED_BY_CAPTAIN status');
+      if (!order)
+        throw new Error("Order not found or not in ACCEPTED_BY_CAPTAIN status");
 
       // Decrement old captain's order count
       await tx.captain.update({
@@ -1740,27 +1934,31 @@ class OrderService {
         where: { id_tenantId: { id: order.captainId, tenantId } },
         select: { currentNumberOfOrders: true },
       });
-      updateCaptainOrderCountsInCache(
-        order.captainId.toString(),
-        tenantId,
-        { currentNumberOfOrders: Math.max(0, captain.currentNumberOfOrders) }
-      );
+      updateCaptainOrderCountsInCache(order.captainId.toString(), tenantId, {
+        currentNumberOfOrders: Math.max(0, captain.currentNumberOfOrders),
+      });
 
       const updated = await tx.order.update({
         where: { id_tenantId: { id: BigInt(orderId), tenantId } },
-        data: { captainId: null, status: 'COUNTER_OFFER_ACCEPTED', acceptedByCapta: null },
+        data: {
+          captainId: null,
+          status: "COUNTER_OFFER_ACCEPTED",
+          acceptedByCapta: null,
+        },
       });
 
       // Notify all available captains
       setImmediate(async () => {
         try {
           await notificationService.sendToAllAvailableCaptains(
-            'طلب توصيل متاح',
-            'طلب توصيل أصبح متاحًا مجددًا. تحقق من التطبيق للقبول.',
-            { orderId: orderId.toString(), type: 'DELIVERY_AVAILABLE' },
-            tenantId
+            "طلب توصيل متاح",
+            "طلب توصيل أصبح متاحًا مجددًا. تحقق من التطبيق للقبول.",
+            { orderId: orderId.toString(), type: "DELIVERY_AVAILABLE" },
+            tenantId,
           );
-        } catch (e) { console.error('releaseCaptain notify error:', e); }
+        } catch (e) {
+          console.error("releaseCaptain notify error:", e);
+        }
       });
 
       return convertBigIntToString(updated);
@@ -1774,11 +1972,14 @@ class OrderService {
         where: {
           id: BigInt(orderId),
           tenantId,
-          status: { notIn: ['DELIVERED', 'CANCELLED'] },
+          status: { notIn: ["DELIVERED", "CANCELLED"] },
         },
         select: { id: true, captainId: true, userId: true, vendorId: true },
       });
-      if (!order) throw new Error('Order not found or cannot be cancelled (already delivered/cancelled)');
+      if (!order)
+        throw new Error(
+          "Order not found or cannot be cancelled (already delivered/cancelled)",
+        );
 
       if (order.captainId) {
         await tx.captain.update({
@@ -1790,16 +1991,14 @@ class OrderService {
           where: { id_tenantId: { id: order.captainId, tenantId } },
           select: { currentNumberOfOrders: true },
         });
-        updateCaptainOrderCountsInCache(
-          order.captainId.toString(),
-          tenantId,
-          { currentNumberOfOrders: Math.max(0, captain.currentNumberOfOrders) }
-        );
+        updateCaptainOrderCountsInCache(order.captainId.toString(), tenantId, {
+          currentNumberOfOrders: Math.max(0, captain.currentNumberOfOrders),
+        });
       }
 
       const updated = await tx.order.update({
         where: { id_tenantId: { id: BigInt(orderId), tenantId } },
-        data: { status: 'CANCELLED' },
+        data: { status: "CANCELLED" },
       });
 
       setImmediate(async () => {
@@ -1807,16 +2006,22 @@ class OrderService {
           if (order.captainId) {
             await notificationService.sendToCaptain(
               order.captainId,
-              'تم إلغاء الطلب',
-              'قام المدير بإلغاء أحد الطلبات المسندة إليك.',
+              "تم إلغاء الطلب",
+              "قام المدير بإلغاء أحد الطلبات المسندة إليك.",
               tenantId,
-              { orderId: orderId.toString(), type: 'ORDER_CANCELLED' }
+              { orderId: orderId.toString(), type: "ORDER_CANCELLED" },
             );
           }
           if (order.vendorId && order.vendorId !== BigInt(-1)) {
-            await notificationService.notifyOrderCancelled(order.vendorId, orderId, tenantId);
+            await notificationService.notifyOrderCancelled(
+              order.vendorId,
+              orderId,
+              tenantId,
+            );
           }
-        } catch (e) { console.error('adminCancelOrder notify error:', e); }
+        } catch (e) {
+          console.error("adminCancelOrder notify error:", e);
+        }
       });
 
       return convertBigIntToString(updated);
@@ -1830,20 +2035,33 @@ class OrderService {
         where: {
           id: BigInt(orderId),
           tenantId,
-          status: { in: ['PENDING', 'COUNTER_OFFER_ACCEPTED', 'ACCEPTED_BY_CAPTAIN'] },
+          status: {
+            in: ["PENDING", "COUNTER_OFFER_ACCEPTED", "ACCEPTED_BY_CAPTAIN"],
+          },
         },
-        select: { id: true, captainId: true, userId: true, vendorId: true, deliveryPrice: true },
+        select: {
+          id: true,
+          captainId: true,
+          userId: true,
+          vendorId: true,
+          deliveryPrice: true,
+        },
       });
-      if (!order) throw new Error('Order not found or not assignable');
+      if (!order) throw new Error("Order not found or not assignable");
 
       const newCaptain = await tx.captain.findUnique({
         where: { id_tenantId: { id: BigInt(captainId), tenantId } },
-        select: { currentNumberOfOrders: true, maxCurrentOrders: true, userName: true, isLocked: true },
+        select: {
+          currentNumberOfOrders: true,
+          maxCurrentOrders: true,
+          userName: true,
+          isLocked: true,
+        },
       });
-      if (!newCaptain) throw new Error('Captain not found');
-      if (newCaptain.isLocked) throw new Error('Captain is locked');
+      if (!newCaptain) throw new Error("Captain not found");
+      if (newCaptain.isLocked) throw new Error("Captain is locked");
       if (newCaptain.currentNumberOfOrders >= newCaptain.maxCurrentOrders) {
-        throw new Error('Captain has reached maximum order capacity');
+        throw new Error("Captain has reached maximum order capacity");
       }
 
       // If order already had a captain, decrement their count
@@ -1856,11 +2074,9 @@ class OrderService {
           where: { id_tenantId: { id: order.captainId, tenantId } },
           select: { currentNumberOfOrders: true },
         });
-        updateCaptainOrderCountsInCache(
-          order.captainId.toString(),
-          tenantId,
-          { currentNumberOfOrders: Math.max(0, oldCaptain.currentNumberOfOrders) }
-        );
+        updateCaptainOrderCountsInCache(order.captainId.toString(), tenantId, {
+          currentNumberOfOrders: Math.max(0, oldCaptain.currentNumberOfOrders),
+        });
       }
 
       // Assign new captain
@@ -1868,15 +2084,17 @@ class OrderService {
         where: { id_tenantId: { id: BigInt(captainId), tenantId } },
         data: { currentNumberOfOrders: { increment: 1 } },
       });
-      updateCaptainOrderCountsInCache(
-        captainId.toString(),
-        tenantId,
-        { currentNumberOfOrders: newCaptain.currentNumberOfOrders + 1 }
-      );
+      updateCaptainOrderCountsInCache(captainId.toString(), tenantId, {
+        currentNumberOfOrders: newCaptain.currentNumberOfOrders + 1,
+      });
 
       const updated = await tx.order.update({
         where: { id_tenantId: { id: BigInt(orderId), tenantId } },
-        data: { captainId: BigInt(captainId), status: 'ACCEPTED_BY_CAPTAIN', acceptedByCapta: new Date() },
+        data: {
+          captainId: BigInt(captainId),
+          status: "ACCEPTED_BY_CAPTAIN",
+          acceptedByCapta: new Date(),
+        },
       });
 
       // Notify new captain and user
@@ -1885,20 +2103,24 @@ class OrderService {
           await Promise.all([
             notificationService.sendToCaptain(
               captainId,
-              'تم تعيينك لطلب',
+              "تم تعيينك لطلب",
               `تم تعيينك لطلب رقم ${orderId} من قِبل الإدارة.`,
               tenantId,
-              { orderId: orderId.toString(), type: 'CAPTAIN_ASSIGNED' }
+              { orderId: orderId.toString(), type: "CAPTAIN_ASSIGNED" },
             ),
-            order.userId ? notificationService.sendToUser(
-              order.userId,
-              'تم تعيين كابتن',
-              'تم تعيين كابتن جديد لطلبك وهو في الطريق إليك.',
-              tenantId,
-              { orderId: orderId.toString(), type: 'CAPTAIN_ASSIGNED' }
-            ) : Promise.resolve(),
+            order.userId
+              ? notificationService.sendToUser(
+                  order.userId,
+                  "تم تعيين كابتن",
+                  "تم تعيين كابتن جديد لطلبك وهو في الطريق إليك.",
+                  tenantId,
+                  { orderId: orderId.toString(), type: "CAPTAIN_ASSIGNED" },
+                )
+              : Promise.resolve(),
           ]);
-        } catch (e) { console.error('assignCaptain notify error:', e); }
+        } catch (e) {
+          console.error("assignCaptain notify error:", e);
+        }
       });
 
       return convertBigIntToString(updated);
@@ -1906,4 +2128,4 @@ class OrderService {
   }
 }
 
-module.exports = new OrderService(); 
+module.exports = new OrderService();
