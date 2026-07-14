@@ -182,6 +182,8 @@ class CaptainController {
       return errorResponse(res, error.message, 400);
     }
   }
+
+  
   // Delete captain account
   async deleteAccount(req, res) {
     try {

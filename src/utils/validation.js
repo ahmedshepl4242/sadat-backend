@@ -354,9 +354,8 @@ const orderValidation = {
       .isLength({ max: 500 })
       .withMessage("Additional notes must be less than 500 characters"),
     body("userAddress")
+      .optional({ checkFalsy: true })
       .trim()
-      .notEmpty()
-      .withMessage("User address is required")
       .isLength({ max: 200 })
       .withMessage("User address must be less than 200 characters"),
     body("userLongitude")
@@ -372,7 +371,11 @@ const orderValidation = {
         "User latitude must be a valid coordinate between -90 and 90",
       ),
     body("phoneNumber")
-      .matches(/^\+?[\d\s\-\(\)]+$/)
+      .optional({ checkFalsy: true })
+      .custom((value) => {
+        if (value === "غير محدد") return true;
+        return /^\+?[\d\s\-\(\)]+$/.test(value);
+      })
       .withMessage("Please provide a valid phone number"),
     body("neighborhoodId")
       .isInt({ min: 1 })

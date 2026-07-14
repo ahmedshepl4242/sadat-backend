@@ -1,8 +1,13 @@
-const prisma = require('../utils/prisma');
-const { hashPassword, comparePassword, generateToken, generateRefreshToken, verifyRefreshToken, convertBigIntToString } = require('../utils/helpers');
-const wasabiService = require('./wasabiService');
-
-
+const prisma = require("../utils/prisma");
+const {
+  hashPassword,
+  comparePassword,
+  generateToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+  convertBigIntToString,
+} = require("../utils/helpers");
+const wasabiService = require("./wasabiService");
 
 // In-memory cache for captain location, order counts, and lock status
 // Format: { "tenantId:captainId": { longitude, latitude, maxCurrentOrders, currentNumberOfOrders, isLocked } }
@@ -22,27 +27,36 @@ class CaptainService {
 
   // Helper function to add pre-signed URLs to multiple captains
   addPhotoUrlsToArray(captains) {
-    return captains.map(captain => this.addPhotoUrl(captain));
+    return captains.map((captain) => this.addPhotoUrl(captain));
   }
 
   // Captain registration
   async signup(captainData, photoFile, tenantId) {
-    const { userName, email, phoneNumber, password, longitude, latitude, fcmToken, workingHoursStart, workingHoursEnd, nationalId } = captainData;
+    const {
+      userName,
+      email,
+      phoneNumber,
+      password,
+      longitude,
+      latitude,
+      fcmToken,
+      workingHoursStart,
+      workingHoursEnd,
+      nationalId,
+    } = captainData;
 
     // Check if captain already exists within tenant
     const existingCaptain = await prisma.captain.findFirst({
       where: {
         tenantId,
-        OR: [
-          { email },
-          { userName },
-          { phoneNumber }
-        ]
-      }
+        OR: [{ email }, { userName }, { phoneNumber }],
+      },
     });
 
     if (existingCaptain) {
-      throw new Error('Captain with this email, username, or phone number already exists');
+      throw new Error(
+        "Captain with this email, username, or phone number already exists",
+      );
     }
 
     // Hash password
@@ -53,7 +67,10 @@ class CaptainService {
     if (photoFile && photoFile.buffer) {
       // Generate a temporary unique ID for the folder since we don't have captain ID yet
       const tempId = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-      photoKey = await wasabiService.uploadCaptainPhoto(photoFile.buffer, tempId);
+      photoKey = await wasabiService.uploadCaptainPhoto(
+        photoFile.buffer,
+        tempId,
+      );
     }
 
     // Create captain
@@ -75,7 +92,6 @@ class CaptainService {
         isLocked: true, // Locked by default until admin approval
         ratingSum: 0,
         ratingCount: 0,
-
       },
       select: {
         id: true,
@@ -92,31 +108,35 @@ class CaptainService {
         updatedAt: true,
         nationalId: true,
         photo: true,
-      }
+      },
     });
 
     // Generate tokens with tenant context
-    const token = generateToken(captain.id, 'captain', tenantId);
-    const refreshToken = generateRefreshToken(captain.id, 'captain', tenantId);
+    const token = generateToken(captain.id, "captain", tenantId);
+    const refreshToken = generateRefreshToken(captain.id, "captain", tenantId);
 
     // Store refresh token in database
     await prisma.captain.update({
       where: {
         id_tenantId: {
           id: captain.id,
-          tenantId: tenantId
-        }
+          tenantId: tenantId,
+        },
       },
-      data: { refreshToken }
+      data: { refreshToken },
     });
 
     // Send notification to admin about new captain signup
-    const notificationService = require('./notificationService');
+    const notificationService = require("./notificationService");
     setImmediate(async () => {
       try {
-        await notificationService.notifyAdminNewCaptainSignup(captain.id, userName, tenantId);
+        await notificationService.notifyAdminNewCaptainSignup(
+          captain.id,
+          userName,
+          tenantId,
+        );
       } catch (error) {
-        console.error('Failed to send new captain signup notification:', error);
+        console.error("Failed to send new captain signup notification:", error);
       }
     });
 
@@ -124,7 +144,7 @@ class CaptainService {
     return {
       captain: this.addPhotoUrl(captainResponse),
       token,
-      refreshToken
+      refreshToken,
     };
   }
 
@@ -134,33 +154,33 @@ class CaptainService {
     const captain = await prisma.captain.findFirst({
       where: {
         email,
-        tenantId
-      }
+        tenantId,
+      },
     });
 
     if (!captain) {
-      throw new Error('Invalid credentials');
+      throw new Error("Invalid credentials");
     }
 
     // Check password
     const isPasswordValid = await comparePassword(password, captain.password);
     if (!isPasswordValid) {
-      throw new Error('Invalid credentials');
+      throw new Error("Invalid credentials");
     }
 
     // Generate tokens with tenant context
-    const token = generateToken(captain.id, 'captain', tenantId);
-    const refreshToken = generateRefreshToken(captain.id, 'captain', tenantId);
+    const token = generateToken(captain.id, "captain", tenantId);
+    const refreshToken = generateRefreshToken(captain.id, "captain", tenantId);
 
     // Store refresh token in database
     await prisma.captain.update({
       where: {
         id_tenantId: {
           id: captain.id,
-          tenantId: tenantId
-        }
+          tenantId: tenantId,
+        },
       },
-      data: { refreshToken }
+      data: { refreshToken },
     });
 
     // Return captain data without password
@@ -176,20 +196,21 @@ class CaptainService {
       workingHoursStart: captain.workingHoursStart,
       workingHoursEnd: captain.workingHoursEnd,
       lastActivated: captain.lastActivated,
-      rating: captain.ratingCount > 0 ? captain.ratingSum / captain.ratingCount : 5.0,
+      rating:
+        captain.ratingCount > 0 ? captain.ratingSum / captain.ratingCount : 5.0,
       ratingCount: captain.ratingCount,
       ratingSum: captain.ratingSum,
       nationalId: captain.nationalId,
       photo: captain.photo,
       createdAt: captain.createdAt,
-      updatedAt: captain.updatedAt
+      updatedAt: captain.updatedAt,
     };
 
     const captainResponse = convertBigIntToString(captainData);
     return {
       captain: this.addPhotoUrl(captainResponse),
       token,
-      refreshToken
+      refreshToken,
     };
   }
 
@@ -199,8 +220,8 @@ class CaptainService {
       where: {
         id_tenantId: {
           id: BigInt(captainId),
-          tenantId
-        }
+          tenantId,
+        },
       },
       select: {
         id: true,
@@ -223,24 +244,35 @@ class CaptainService {
         maxEarningsSinceLastActivation: true,
         lastActivated: true,
         createdAt: true,
-        updatedAt: true
-      }
+        updatedAt: true,
+      },
     });
 
     if (!captain) {
-      throw new Error('Captain not found');
+      throw new Error("Captain not found");
     }
 
     const captainConverted = convertBigIntToString(captain);
     if (captainConverted.photo) {
-      captainConverted.photoUrl = wasabiService.generatePreSignedUrl(captainConverted.photo);
+      captainConverted.photoUrl = wasabiService.generatePreSignedUrl(
+        captainConverted.photo,
+      );
     }
     return this.addPhotoUrl(captainConverted);
   }
 
   // Update captain profile
   async updateProfile(captainId, updateData, tenantId, photoFile) {
-    const { userName, email, phoneNumber, longitude, latitude, fcmToken, workingHoursStart, workingHoursEnd } = updateData;
+    const {
+      userName,
+      email,
+      phoneNumber,
+      longitude,
+      latitude,
+      fcmToken,
+      workingHoursStart,
+      workingHoursEnd,
+    } = updateData;
 
     // Check if email or username is being changed and if it already exists within tenant
     if (email || userName || phoneNumber) {
@@ -250,21 +282,24 @@ class CaptainService {
           OR: [
             ...(email ? [{ email }] : []),
             ...(userName ? [{ userName }] : []),
-            ...(phoneNumber ? [{ phoneNumber }] : [])
+            ...(phoneNumber ? [{ phoneNumber }] : []),
           ],
-          NOT: { id: BigInt(captainId) }
-        }
+          NOT: { id: BigInt(captainId) },
+        },
       });
 
       if (existingCaptain) {
-        throw new Error('Email, username, or phone number already exists');
+        throw new Error("Email, username, or phone number already exists");
       }
     }
 
     // Upload photo to Wasabi if provided
     let photoKey = undefined;
     if (photoFile && photoFile.buffer) {
-      photoKey = await wasabiService.uploadCaptainPhoto(photoFile.buffer, captainId);
+      photoKey = await wasabiService.uploadCaptainPhoto(
+        photoFile.buffer,
+        captainId,
+      );
     }
 
     // Update captain (verify tenant ownership)
@@ -272,19 +307,23 @@ class CaptainService {
       where: {
         id_tenantId: {
           id: BigInt(captainId),
-          tenantId
-        }
+          tenantId,
+        },
       },
       data: {
         ...(userName && { userName }),
         ...(email && { email }),
         ...(phoneNumber && { phoneNumber }),
-        ...(longitude !== undefined && { longitude: longitude ? parseFloat(longitude) : null }),
-        ...(latitude !== undefined && { latitude: latitude ? parseFloat(latitude) : null }),
+        ...(longitude !== undefined && {
+          longitude: longitude ? parseFloat(longitude) : null,
+        }),
+        ...(latitude !== undefined && {
+          latitude: latitude ? parseFloat(latitude) : null,
+        }),
         ...(fcmToken !== undefined && { fcmToken }),
         ...(workingHoursStart !== undefined && { workingHoursStart }),
         ...(workingHoursEnd !== undefined && { workingHoursEnd }),
-        ...(photoKey && { photo: photoKey })
+        ...(photoKey && { photo: photoKey }),
       },
       select: {
         id: true,
@@ -298,13 +337,15 @@ class CaptainService {
         ratingCount: true,
         createdAt: true,
         updatedAt: true,
-        photo: true
-      }
+        photo: true,
+      },
     });
 
     const captainConverted = convertBigIntToString(updatedCaptain);
     if (captainConverted.photo) {
-      captainConverted.photoUrl = wasabiService.generatePreSignedUrl(captainConverted.photo);
+      captainConverted.photoUrl = wasabiService.generatePreSignedUrl(
+        captainConverted.photo,
+      );
     }
     return captainConverted;
   }
@@ -314,22 +355,22 @@ class CaptainService {
     const captain = await prisma.captain.findFirst({
       where: {
         id: BigInt(captainId),
-        tenantId
-      }
+        tenantId,
+      },
     });
 
     if (!captain) {
-      throw new Error('Captain not found');
+      throw new Error("Captain not found");
     }
 
     const updatedCaptain = await prisma.captain.update({
       where: {
         id_tenantId: {
           id: BigInt(captainId),
-          tenantId
-        }
+          tenantId,
+        },
       },
-      data: { isAvailable }
+      data: { isAvailable },
     });
 
     return convertBigIntToString(updatedCaptain);
@@ -340,50 +381,55 @@ class CaptainService {
       where: {
         id_tenantId: {
           id: BigInt(captainId),
-          tenantId
-        }
+          tenantId,
+        },
       },
       data: { fcmToken },
       select: {
         id: true,
         userName: true,
-        fcmToken: true
-      }
+        fcmToken: true,
+      },
     });
 
     return convertBigIntToString(updatedCaptain);
   }
 
   // Update working hours
-  async updateWorkingHours(captainId, workingHoursStart, workingHoursEnd, tenantId) {
+  async updateWorkingHours(
+    captainId,
+    workingHoursStart,
+    workingHoursEnd,
+    tenantId,
+  ) {
     const captain = await prisma.captain.findFirst({
       where: {
         id: BigInt(captainId),
-        tenantId
-      }
+        tenantId,
+      },
     });
 
     if (!captain) {
-      throw new Error('Captain not found');
+      throw new Error("Captain not found");
     }
 
     const updatedCaptain = await prisma.captain.update({
       where: {
         id_tenantId: {
           id: BigInt(captainId),
-          tenantId
-        }
+          tenantId,
+        },
       },
       data: {
         workingHoursStart,
-        workingHoursEnd
+        workingHoursEnd,
       },
       select: {
         id: true,
         userName: true,
         workingHoursStart: true,
-        workingHoursEnd: true
-      }
+        workingHoursEnd: true,
+      },
     });
 
     return convertBigIntToString(updatedCaptain);
@@ -397,17 +443,17 @@ class CaptainService {
       where: {
         id_tenantId: {
           id: BigInt(captainId),
-          tenantId
-        }
+          tenantId,
+        },
       },
       select: {
         id: true,
-        isAvailable: true
-      }
+        isAvailable: true,
+      },
     });
 
     if (!captain) {
-      throw new Error('Captain not found');
+      throw new Error("Captain not found");
     }
 
     // Check if captain has active delivery within tenant
@@ -415,14 +461,14 @@ class CaptainService {
       where: {
         captainId: BigInt(captainId),
         tenantId,
-        status: { in: ['ACCEPTED_BY_CAPTAIN', 'DELIVERED'] }
-      }
+        status: { in: ["ACCEPTED_BY_CAPTAIN", "DELIVERED"] },
+      },
     });
 
     return convertBigIntToString({
       ...captain,
       isDelivering: !!activeOrder,
-      activeOrderId: activeOrder ? activeOrder.id.toString() : null
+      activeOrderId: activeOrder ? activeOrder.id.toString() : null,
     });
   }
 
@@ -432,32 +478,38 @@ class CaptainService {
       where: {
         id_tenantId: {
           id: BigInt(captainId),
-          tenantId
-        }
+          tenantId,
+        },
       },
       select: {
         id: true,
         longitude: true,
         latitude: true,
         isAvailable: true,
-        isLocked: true
-      }
+        isLocked: true,
+      },
     });
 
     if (!captain) {
-      throw new Error('Captain not found');
+      throw new Error("Captain not found");
     }
 
     return convertBigIntToString(captain);
   }
 
   // Get captain orders
-  async getCaptainOrders(captainId, tenantId, page = 1, limit = 10, status = null) {
+  async getCaptainOrders(
+    captainId,
+    tenantId,
+    page = 1,
+    limit = 10,
+    status = null,
+  ) {
     const skip = (page - 1) * limit;
 
     const whereClause = {
       captainId: BigInt(captainId),
-      tenantId
+      tenantId,
     };
     if (status) {
       whereClause.status = status;
@@ -472,27 +524,27 @@ class CaptainService {
               id: true,
               userName: true,
               phoneNumber: true,
-              address: true
-            }
+              address: true,
+            },
           },
           vendor: {
             select: {
               id: true,
               vendorName: true,
               contactNumber: true,
-              address: true
-            }
+              address: true,
+            },
           },
           neighborhood: {
             id: true,
-            name: true
-          }
+            name: true,
+          },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
-        take: parseInt(limit)
+        take: parseInt(limit),
       }),
-      prisma.order.count({ where: whereClause })
+      prisma.order.count({ where: whereClause }),
     ]);
 
     return {
@@ -501,8 +553,8 @@ class CaptainService {
         page: parseInt(page),
         limit: parseInt(limit),
         total,
-        pages: Math.ceil(total / limit)
-      }
+        pages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -515,7 +567,7 @@ class CaptainService {
         where: {
           tenantId,
           isAvailable: true,
-          isLocked: false
+          isLocked: false,
         },
         select: {
           id: true,
@@ -524,25 +576,26 @@ class CaptainService {
           latitude: true,
           phoneNumber: true,
           ratingSum: true,
-          ratingCount: true
+          ratingCount: true,
         },
-        orderBy: { ratingSum: 'desc' },
+        orderBy: { ratingSum: "desc" },
         skip,
-        take: parseInt(limit)
+        take: parseInt(limit),
       }),
       prisma.captain.count({
         where: {
           tenantId,
           isAvailable: true,
-          isLocked: false
-        }
-      })
+          isLocked: false,
+        },
+      }),
     ]);
 
     // Calculate ratings for each captain
-    const captainsWithRating = captains.map(captain => ({
+    const captainsWithRating = captains.map((captain) => ({
       ...captain,
-      rating: captain.ratingCount > 0 ? captain.ratingSum / captain.ratingCount : 5.0
+      rating:
+        captain.ratingCount > 0 ? captain.ratingSum / captain.ratingCount : 5.0,
     }));
 
     return {
@@ -551,8 +604,8 @@ class CaptainService {
         page: parseInt(page),
         limit: parseInt(limit),
         total,
-        pages: Math.ceil(total / limit)
-      }
+        pages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -562,8 +615,8 @@ class CaptainService {
       where: {
         id_tenantId: {
           id: BigInt(captainId),
-          tenantId
-        }
+          tenantId,
+        },
       },
       select: {
         id: true,
@@ -576,12 +629,12 @@ class CaptainService {
         ratingSum: true,
         ratingCount: true,
         createdAt: true,
-        updatedAt: true
-      }
+        updatedAt: true,
+      },
     });
 
     if (!captain) {
-      throw new Error('Captain not found');
+      throw new Error("Captain not found");
     }
 
     return convertBigIntToString(captain);
@@ -592,12 +645,12 @@ class CaptainService {
     const captain = await prisma.captain.findFirst({
       where: {
         id: BigInt(captainId),
-        tenantId
-      }
+        tenantId,
+      },
     });
 
     if (!captain) {
-      throw new Error('Captain not found');
+      throw new Error("Captain not found");
     }
 
     // Calculate new average rating
@@ -606,22 +659,23 @@ class CaptainService {
       where: {
         captainId: BigInt(captainId),
         tenantId,
-        status: 'DELIVERED'
-      }
+        status: "DELIVERED",
+      },
     });
 
-    const newAverageRating = totalOrders > 0
-      ? ((currentRating * (totalOrders - 1)) + newRating) / totalOrders
-      : newRating;
+    const newAverageRating =
+      totalOrders > 0
+        ? (currentRating * (totalOrders - 1) + newRating) / totalOrders
+        : newRating;
 
     const updatedCaptain = await prisma.captain.update({
       where: {
         id_tenantId: {
           id: BigInt(captainId),
-          tenantId
-        }
+          tenantId,
+        },
       },
-      data: { rating: newAverageRating }
+      data: { rating: newAverageRating },
     });
 
     return convertBigIntToString(updatedCaptain);
@@ -634,26 +688,33 @@ class CaptainService {
         where: {
           captainId: BigInt(captainId),
           tenantId,
-          status: 'DELIVERED'
-        }
+          status: "DELIVERED",
+        },
       }),
       prisma.order.aggregate({
         where: {
           captainId: BigInt(captainId),
-          tenantId
+          tenantId,
         },
-        _sum: { deliveryPrice: true }
-      })
+        _sum: { deliveryPrice: true },
+      }),
     ]);
 
     return {
       totalOrders,
-      totalEarnings: totalEarnings._sum.deliveryPrice || 0
+      totalEarnings: totalEarnings._sum.deliveryPrice || 0,
     };
   }
 
   // Search captains by location (using coordinates)
-  async searchCaptainsByLocation(longitude, latitude, tenantId, radiusKm = 10, page = 1, limit = 10) {
+  async searchCaptainsByLocation(
+    longitude,
+    latitude,
+    tenantId,
+    radiusKm = 10,
+    page = 1,
+    limit = 10,
+  ) {
     const skip = (page - 1) * limit;
 
     // For now, we'll get all available captains and filter client-side
@@ -665,7 +726,7 @@ class CaptainService {
           isAvailable: true,
           isLocked: false,
           longitude: { not: null },
-          latitude: { not: null }
+          latitude: { not: null },
         },
         select: {
           id: true,
@@ -674,11 +735,11 @@ class CaptainService {
           latitude: true,
           phoneNumber: true,
           ratingSum: true,
-          ratingCount: true
+          ratingCount: true,
         },
-        orderBy: { ratingSum: 'desc' },
+        orderBy: { ratingSum: "desc" },
         skip,
-        take: parseInt(limit)
+        take: parseInt(limit),
       }),
       prisma.captain.count({
         where: {
@@ -686,15 +747,16 @@ class CaptainService {
           isAvailable: true,
           isLocked: false,
           longitude: { not: null },
-          latitude: { not: null }
-        }
-      })
+          latitude: { not: null },
+        },
+      }),
     ]);
 
     // Calculate ratings for each captain
-    const captainsWithRating = captains.map(captain => ({
+    const captainsWithRating = captains.map((captain) => ({
       ...captain,
-      rating: captain.ratingCount > 0 ? captain.ratingSum / captain.ratingCount : 5.0
+      rating:
+        captain.ratingCount > 0 ? captain.ratingSum / captain.ratingCount : 5.0,
     }));
 
     return {
@@ -703,8 +765,8 @@ class CaptainService {
         page: parseInt(page),
         limit: parseInt(limit),
         total,
-        pages: Math.ceil(total / limit)
-      }
+        pages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -733,14 +795,14 @@ class CaptainService {
     captainLocationCache.set(cacheKey, {
       ...currentCache,
       longitude: parseFloat(longitude),
-      latitude: parseFloat(latitude)
+      latitude: parseFloat(latitude),
     });
 
     return {
       id: captainId,
       longitude: parseFloat(longitude),
       latitude: parseFloat(latitude),
-      message: 'Location updated successfully'
+      message: "Location updated successfully",
     };
   }
 
@@ -759,7 +821,7 @@ class CaptainService {
 
     captainLocationCache.set(cacheKey, {
       ...currentCache,
-      ...cacheUpdates
+      ...cacheUpdates,
     });
 
     return captainLocationCache.get(cacheKey);
@@ -769,7 +831,7 @@ class CaptainService {
   getCachedCaptainData(tenantId = null) {
     const result = {};
     for (const [cacheKey, data] of captainLocationCache.entries()) {
-      const [keyTenantId, captainId] = cacheKey.split(':');
+      const [keyTenantId, captainId] = cacheKey.split(":");
       if (!tenantId || keyTenantId === tenantId) {
         result[captainId] = data;
       }
@@ -787,7 +849,7 @@ class CaptainService {
       const captain = await prisma.captain.findFirst({
         where: {
           id: BigInt(captainId),
-          tenantId
+          tenantId,
         },
         select: {
           id: true,
@@ -803,8 +865,8 @@ class CaptainService {
           ratingSum: true,
           ratingCount: true,
           createdAt: true,
-          updatedAt: true
-        }
+          updatedAt: true,
+        },
       });
 
       if (!captain) {
@@ -817,7 +879,7 @@ class CaptainService {
         latitude: captain.latitude,
         maxCurrentOrders: captain.maxCurrentOrders,
         currentNumberOfOrders: captain.currentNumberOfOrders,
-        isLocked: captain.isLocked
+        isLocked: captain.isLocked,
       });
 
       return convertBigIntToString(captain);
@@ -831,7 +893,7 @@ class CaptainService {
       maxCurrentOrders: cached.maxCurrentOrders,
       currentNumberOfOrders: cached.currentNumberOfOrders,
       longitude: cached.longitude,
-      latitude: cached.latitude
+      latitude: cached.latitude,
     };
   }
 
@@ -841,7 +903,7 @@ class CaptainService {
     const currentCache = captainLocationCache.get(cacheKey) || {};
     captainLocationCache.set(cacheKey, {
       ...currentCache,
-      isLocked
+      isLocked,
     });
   }
 
@@ -850,13 +912,17 @@ class CaptainService {
     // First check cache
     const cacheKey = createCacheKey(tenantId, captainId);
     const cached = captainLocationCache.get(cacheKey);
-    if (cached && cached.longitude !== undefined && cached.latitude !== undefined) {
+    if (
+      cached &&
+      cached.longitude !== undefined &&
+      cached.latitude !== undefined
+    ) {
       return {
         id: captainId,
         longitude: cached.longitude,
         latitude: cached.latitude,
         maxCurrentOrders: cached.maxCurrentOrders,
-        currentNumberOfOrders: cached.currentNumberOfOrders
+        currentNumberOfOrders: cached.currentNumberOfOrders,
       };
     }
 
@@ -877,9 +943,8 @@ class CaptainService {
       },
     });
 
-
     if (!captain) {
-      throw new Error('Captain not found');
+      throw new Error("Captain not found");
     }
 
     // if (captain.isLocked) {
@@ -892,7 +957,7 @@ class CaptainService {
       latitude: captain.latitude,
       maxCurrentOrders: captain.maxCurrentOrders,
       currentNumberOfOrders: captain.currentNumberOfOrders,
-      isLocked: captain.isLocked
+      isLocked: captain.isLocked,
     };
   }
 
@@ -900,7 +965,7 @@ class CaptainService {
   async initializeCache(tenantId) {
     const captains = await prisma.captain.findMany({
       where: {
-        tenantId
+        tenantId,
       },
       select: {
         id: true,
@@ -908,11 +973,11 @@ class CaptainService {
         latitude: true,
         maxCurrentOrders: true,
         currentNumberOfOrders: true,
-        isLocked: true
-      }
+        isLocked: true,
+      },
     });
 
-    captains.forEach(captain => {
+    captains.forEach((captain) => {
       if (captain.longitude !== null && captain.latitude !== null) {
         const cacheKey = createCacheKey(tenantId, captain.id.toString());
         captainLocationCache.set(cacheKey, {
@@ -920,12 +985,14 @@ class CaptainService {
           latitude: captain.latitude,
           maxCurrentOrders: captain.maxCurrentOrders,
           currentNumberOfOrders: captain.currentNumberOfOrders,
-          isLocked: captain.isLocked
+          isLocked: captain.isLocked,
         });
       }
     });
 
-    console.log(`Initialized captain cache with ${captainLocationCache.size} captains`);
+    console.log(
+      `Initialized captain cache with ${captainLocationCache.size} captains`,
+    );
   }
 
   // Refresh token
@@ -939,7 +1006,7 @@ class CaptainService {
         where: {
           id: BigInt(decoded.id),
           tenantId,
-          refreshToken: refreshToken
+          refreshToken: refreshToken,
         },
         select: {
           id: true,
@@ -956,43 +1023,50 @@ class CaptainService {
           ratingSum: true,
           ratingCount: true,
           createdAt: true,
-          updatedAt: true
-        }
+          updatedAt: true,
+        },
       });
 
       if (!captain) {
-        throw new Error('Invalid refresh token: no captain');
+        throw new Error("Invalid refresh token: no captain");
       }
 
       // Generate new tokens with tenant context
-      const newToken = generateToken(captain.id, 'captain', tenantId);
-      const newRefreshToken = generateRefreshToken(captain.id, 'captain', tenantId);
+      const newToken = generateToken(captain.id, "captain", tenantId);
+      const newRefreshToken = generateRefreshToken(
+        captain.id,
+        "captain",
+        tenantId,
+      );
 
       // Update refresh token in database
       await prisma.captain.update({
         where: {
           id_tenantId: {
             id: captain.id,
-            tenantId: tenantId
-          }
+            tenantId: tenantId,
+          },
         },
-        data: { refreshToken: newRefreshToken }
+        data: { refreshToken: newRefreshToken },
       });
 
       // Return captain data without password
       const captainData = {
         ...captain,
-        rating: captain.ratingCount > 0 ? captain.ratingSum / captain.ratingCount : 5.0
+        rating:
+          captain.ratingCount > 0
+            ? captain.ratingSum / captain.ratingCount
+            : 5.0,
       };
 
       return {
         captain: convertBigIntToString(captainData),
         token: newToken,
-        refreshToken: newRefreshToken
+        refreshToken: newRefreshToken,
       };
     } catch (error) {
       console.log(error);
-      throw new Error('Invalid refresh token');
+      throw new Error("Invalid refresh token");
     }
   }
   // Delete captain account
@@ -1002,15 +1076,22 @@ class CaptainService {
     });
 
     if (!captain) {
-      throw new Error('Captain not found');
+      throw new Error("Captain not found");
     }
+
+    // put the any table that has foreign key to captain to  set null
+    // Example:
+    await prisma.order.updateMany({
+      where: { captainId: BigInt(captainId) },
+      data: { captainId: null },
+    });
 
     await prisma.captain.delete({
       where: { id_tenantId: { id: BigInt(captainId), tenantId } },
     });
 
-    return { message: 'Account deleted successfully' };
+    return { message: "Account deleted successfully" };
   }
 }
 
-module.exports = new CaptainService(); 
+module.exports = new CaptainService();

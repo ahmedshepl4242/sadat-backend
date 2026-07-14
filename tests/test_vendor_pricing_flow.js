@@ -1,16 +1,16 @@
-const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
-const { TimingTracker } = require('./timingUtils');
+const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
+const { TimingTracker } = require("./timingUtils");
 
 // Configuration
 const CONFIG = {
-  baseURL: 'http://localhost:3000',
-  tenantId: 'tenant_' + Date.now().toString(), // Unique tenant ID for testing
-  logFile: 'vendor_pricing_test_results.log',
+  baseURL: "http://localhost:3000",
+  tenantId: "tenant_" + Date.now().toString(), // Unique tenant ID for testing
+  logFile: "vendor_pricing_test_results.log",
   timeout: 30000,
   neighborhoodCount: 3,
-  vendorCount: 3
+  vendorCount: 3,
 };
 
 // Timing tracker
@@ -21,50 +21,58 @@ const TEST_DATA = {
   admin: {
     userName: `TestPricingAdmin_${Date.now()}`,
     email: `testpricingadmin_${Date.now()}@test.com`,
-    phoneNumber: `+1777888${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
-    password: 'TestAdmin123!',
-    address: '789 Admin Plaza',
+    phoneNumber: `+1777888${Math.floor(Math.random() * 1000000)
+      .toString()
+      .padStart(6, "0")}`,
+    password: "TestAdmin123!",
+    address: "789 Admin Plaza",
     tenantId: CONFIG.tenantId,
-    fcmToken: 'test_admin_fcm_token',
-    neighborhood_name: 'Test Initial Neighborhood'
+    fcmToken: "test_admin_fcm_token",
+    neighborhood_name: "Test Initial Neighborhood",
   },
   neighborhoods: [
-    { name: 'Downtown District' },
-    { name: 'Suburban Heights' },
-    { name: 'Industrial Zone' }
+    { name: "Downtown District" },
+    { name: "Suburban Heights" },
+    { name: "Industrial Zone" },
   ],
   vendors: [
     {
       vendorName: `PizzaPlace_${Date.now()}`,
-      contactNumber: `+1111222${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
-      password: 'TestVendor123!',
-      address: '100 Pizza Street',
-      description: 'Best pizza in town',
+      contactNumber: `+1111222${Math.floor(Math.random() * 1000000)
+        .toString()
+        .padStart(6, "0")}`,
+      password: "TestVendor123!",
+      address: "100 Pizza Street",
+      description: "Best pizza in town",
       longitude: -74.006,
       latitude: 40.7128,
-      fcmToken: 'pizza_vendor_fcm_token'
+      fcmToken: "pizza_vendor_fcm_token",
     },
     {
       vendorName: `BurgerJoint_${Date.now()}`,
-      contactNumber: `+1333444${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
-      password: 'TestVendor123!',
-      address: '200 Burger Avenue',
-      description: 'Gourmet burgers and fries',
+      contactNumber: `+1333444${Math.floor(Math.random() * 1000000)
+        .toString()
+        .padStart(6, "0")}`,
+      password: "TestVendor123!",
+      address: "200 Burger Avenue",
+      description: "Gourmet burgers and fries",
       longitude: -74.007,
       latitude: 40.7129,
-      fcmToken: 'burger_vendor_fcm_token'
+      fcmToken: "burger_vendor_fcm_token",
     },
     {
       vendorName: `SushiBar_${Date.now()}`,
-      contactNumber: `+1555666${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
-      password: 'TestVendor123!',
-      address: '300 Sushi Lane',
-      description: 'Fresh sushi and Japanese cuisine',
+      contactNumber: `+1555666${Math.floor(Math.random() * 1000000)
+        .toString()
+        .padStart(6, "0")}`,
+      password: "TestVendor123!",
+      address: "300 Sushi Lane",
+      description: "Fresh sushi and Japanese cuisine",
       longitude: -74.008,
-      latitude: 40.7130,
-      fcmToken: 'sushi_vendor_fcm_token'
-    }
-  ]
+      latitude: 40.713,
+      fcmToken: "sushi_vendor_fcm_token",
+    },
+  ],
 };
 
 // Global state
@@ -72,11 +80,11 @@ const STATE = {
   tokens: {},
   ids: {
     neighborhoods: [],
-    vendors: []
+    vendors: [],
   },
   requestCount: 0,
   createdNeighborhoods: [],
-  createdVendors: []
+  createdVendors: [],
 };
 
 // Logging utility
@@ -88,7 +96,7 @@ class Logger {
 
   initLogFile() {
     const timestamp = new Date().toISOString();
-    const header = `\n${'='.repeat(80)}\nVendor Pricing Test Run Started: ${timestamp}\n${'='.repeat(80)}\n`;
+    const header = `\n${"=".repeat(80)}\nVendor Pricing Test Run Started: ${timestamp}\n${"=".repeat(80)}\n`;
     fs.writeFileSync(this.logFile, header);
   }
 
@@ -97,21 +105,29 @@ class Logger {
     const logEntry = `[${timestamp}] ${level.toUpperCase()}: ${message}`;
 
     console.log(logEntry);
-    fs.appendFileSync(this.logFile, logEntry + '\n');
+    fs.appendFileSync(this.logFile, logEntry + "\n");
 
     if (data) {
       const dataStr = JSON.stringify(data, null, 2);
       console.log(dataStr);
-      fs.appendFileSync(this.logFile, dataStr + '\n');
+      fs.appendFileSync(this.logFile, dataStr + "\n");
     }
 
-    fs.appendFileSync(this.logFile, '\n');
+    fs.appendFileSync(this.logFile, "\n");
   }
 
-  info(message, data) { this.log('INFO', message, data); }
-  success(message, data) { this.log('SUCCESS', message, data); }
-  error(message, data) { this.log('ERROR', message, data); }
-  warn(message, data) { this.log('WARN', message, data); }
+  info(message, data) {
+    this.log("INFO", message, data);
+  }
+  success(message, data) {
+    this.log("SUCCESS", message, data);
+  }
+  error(message, data) {
+    this.log("ERROR", message, data);
+  }
+  warn(message, data) {
+    this.log("WARN", message, data);
+  }
 }
 
 const logger = new Logger(CONFIG.logFile);
@@ -125,34 +141,40 @@ class ApiClient {
       baseURL,
       timeout: CONFIG.timeout,
       headers: {
-        'Content-Type': 'application/json',
-        'x-tenant-id': tenantId
-      }
+        "Content-Type": "application/json",
+        "x-tenant-id": tenantId,
+      },
     });
 
     // Request interceptor
     this.client.interceptors.request.use(
       (config) => {
         STATE.requestCount++;
-        logger.info(`Request #${STATE.requestCount}: ${config.method.toUpperCase()} ${config.url}`, {
-          headers: config.headers,
-          data: config.data
-        });
+        logger.info(
+          `Request #${STATE.requestCount}: ${config.method.toUpperCase()} ${config.url}`,
+          {
+            headers: config.headers,
+            data: config.data,
+          },
+        );
         return config;
       },
       (error) => {
-        logger.error('Request interceptor error', error);
+        logger.error("Request interceptor error", error);
         return Promise.reject(error);
-      }
+      },
     );
 
     // Response interceptor
     this.client.interceptors.response.use(
       (response) => {
-        logger.success(`Response #${STATE.requestCount}: ${response.status} ${response.statusText}`, {
-          data: response.data,
-          headers: response.headers
-        });
+        logger.success(
+          `Response #${STATE.requestCount}: ${response.status} ${response.statusText}`,
+          {
+            data: response.data,
+            headers: response.headers,
+          },
+        );
         return response;
       },
       (error) => {
@@ -160,11 +182,14 @@ class ApiClient {
           status: error.response?.status,
           statusText: error.response?.statusText,
           data: error.response?.data,
-          message: error.message
+          message: error.message,
         };
-        logger.error(`Response #${STATE.requestCount}: Request failed`, errorData);
+        logger.error(
+          `Response #${STATE.requestCount}: Request failed`,
+          errorData,
+        );
         return Promise.reject(error);
-      }
+      },
     );
   }
 
@@ -178,11 +203,11 @@ class ApiClient {
   }
 
   setAuthToken(token) {
-    this.client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    this.client.defaults.headers.common["Authorization"] = `Bearer ${token}`;
   }
 
   clearAuthToken() {
-    delete this.client.defaults.headers.common['Authorization'];
+    delete this.client.defaults.headers.common["Authorization"];
   }
 }
 
@@ -190,31 +215,33 @@ const apiClient = new ApiClient(CONFIG.baseURL, CONFIG.tenantId);
 
 // Utility functions
 async function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // Authentication functions
 async function signupAdmin() {
-  logger.info('🔄 Starting admin signup (with initial neighborhood and system vendor)');
+  logger.info(
+    "🔄 Starting admin signup (with initial neighborhood and system vendor)",
+  );
 
   try {
     const response = await apiClient.request({
-      method: 'POST',
-      url: '/api/admin-signup/signup',
-      data: TEST_DATA.admin
+      method: "POST",
+      url: "/api/admin-signup/signup",
+      data: TEST_DATA.admin,
     });
 
     const data = response.data || response;
 
     if (!data || !data.admin || !data.neighborhood || !data.systemVendor) {
-      logger.error('❌ Admin signup failed - unexpected response structure', {
-        responseKeys: response ? Object.keys(response) : 'no response',
-        dataKeys: data ? Object.keys(data) : 'no data',
+      logger.error("❌ Admin signup failed - unexpected response structure", {
+        responseKeys: response ? Object.keys(response) : "no response",
+        dataKeys: data ? Object.keys(data) : "no data",
         hasAdmin: !!(data && data.admin),
         hasNeighborhood: !!(data && data.neighborhood),
-        hasSystemVendor: !!(data && data.systemVendor)
+        hasSystemVendor: !!(data && data.systemVendor),
       });
-      throw new Error('Admin signup response has unexpected structure');
+      throw new Error("Admin signup response has unexpected structure");
     }
 
     STATE.tokens.admin = data.token;
@@ -227,26 +254,29 @@ async function signupAdmin() {
     STATE.createdNeighborhoods.push({
       id: data.neighborhood.id,
       name: data.neighborhood.name,
-      isInitial: true
+      isInitial: true,
     });
 
-    logger.success('✅ Admin signup successful (with initial neighborhood and system vendor)', {
-      adminId: STATE.ids.admin,
-      initialNeighborhoodId: STATE.ids.initialNeighborhood,
-      systemVendorId: STATE.ids.systemVendor,
-      token: STATE.tokens.admin.substring(0, 20) + '...'
-    });
+    logger.success(
+      "✅ Admin signup successful (with initial neighborhood and system vendor)",
+      {
+        adminId: STATE.ids.admin,
+        initialNeighborhoodId: STATE.ids.initialNeighborhood,
+        systemVendorId: STATE.ids.systemVendor,
+        token: STATE.tokens.admin.substring(0, 20) + "...",
+      },
+    );
 
     return response;
   } catch (error) {
-    logger.error('❌ Admin signup failed', error.message);
+    logger.error("❌ Admin signup failed", error.message);
     throw error;
   }
 }
 
 // Neighborhood functions
 async function createNeighborhoods() {
-  logger.info('🔄 Creating additional neighborhoods');
+  logger.info("🔄 Creating additional neighborhoods");
 
   apiClient.setAuthToken(STATE.tokens.admin);
 
@@ -255,15 +285,15 @@ async function createNeighborhoods() {
 
     try {
       const response = await apiClient.request({
-        method: 'POST',
-        url: '/api/neighborhoods',
-        data: neighborhoodData
+        method: "POST",
+        url: "/api/neighborhoods",
+        data: neighborhoodData,
       });
 
       const createdNeighborhood = {
         id: response.data.id,
         name: response.data.name,
-        isInitial: false
+        isInitial: false,
       };
 
       STATE.createdNeighborhoods.push(createdNeighborhood);
@@ -271,31 +301,34 @@ async function createNeighborhoods() {
 
       logger.success(`✅ Neighborhood created: ${response.data.name}`, {
         id: response.data.id,
-        name: response.data.name
+        name: response.data.name,
       });
 
       await delay(500); // Small delay between creations
     } catch (error) {
-      logger.error(`❌ Failed to create neighborhood: ${neighborhoodData.name}`, error.message);
+      logger.error(
+        `❌ Failed to create neighborhood: ${neighborhoodData.name}`,
+        error.message,
+      );
       throw error;
     }
   }
 
-  logger.success('✅ All additional neighborhoods created successfully', {
+  logger.success("✅ All additional neighborhoods created successfully", {
     totalNeighborhoods: STATE.createdNeighborhoods.length,
-    neighborhoods: STATE.createdNeighborhoods
+    neighborhoods: STATE.createdNeighborhoods,
   });
 }
 
 async function verifyNeighborhoodsCount() {
-  logger.info('🔄 Verifying neighborhoods count');
+  logger.info("🔄 Verifying neighborhoods count");
 
   apiClient.setAuthToken(STATE.tokens.admin);
 
   try {
     const response = await apiClient.request({
-      method: 'GET',
-      url: '/api/neighborhoods?limit=100'
+      method: "GET",
+      url: "/api/neighborhoods?limit=100",
     });
 
     const fetchedNeighborhoods = response.data.neighborhoods;
@@ -303,25 +336,33 @@ async function verifyNeighborhoodsCount() {
     const actualCount = fetchedNeighborhoods.length;
 
     if (actualCount === expectedCount) {
-      logger.success(`✅ Neighborhoods count verified: ${actualCount} neighborhoods`, {
-        expected: expectedCount,
-        actual: actualCount,
-        neighborhoods: fetchedNeighborhoods.map(n => ({ id: n.id, name: n.name }))
-      });
+      logger.success(
+        `✅ Neighborhoods count verified: ${actualCount} neighborhoods`,
+        {
+          expected: expectedCount,
+          actual: actualCount,
+          neighborhoods: fetchedNeighborhoods.map((n) => ({
+            id: n.id,
+            name: n.name,
+          })),
+        },
+      );
     } else {
-      logger.warn(`⚠️ Neighborhoods count mismatch: expected ${expectedCount}, got ${actualCount}`);
+      logger.warn(
+        `⚠️ Neighborhoods count mismatch: expected ${expectedCount}, got ${actualCount}`,
+      );
     }
 
     return response.data;
   } catch (error) {
-    logger.error('❌ Failed to verify neighborhoods count', error.message);
+    logger.error("❌ Failed to verify neighborhoods count", error.message);
     throw error;
   }
 }
 
 // Vendor functions
 async function signupVendors() {
-  logger.info('🔄 Starting vendor signups');
+  logger.info("🔄 Starting vendor signups");
 
   for (let i = 0; i < TEST_DATA.vendors.length; i++) {
     const vendorData = TEST_DATA.vendors[i];
@@ -332,14 +373,14 @@ async function signupVendors() {
 
     const vendorWithNeighborhood = {
       ...vendorData,
-      neighborhoodId: assignedNeighborhood.id
+      neighborhoodId: assignedNeighborhood.id,
     };
 
     try {
       const response = await apiClient.request({
-        method: 'POST',
-        url: '/api/auth/signup/vendor',
-        data: vendorWithNeighborhood
+        method: "POST",
+        url: "/api/auth/signup/vendor",
+        data: vendorWithNeighborhood,
       });
 
       const createdVendor = {
@@ -347,7 +388,7 @@ async function signupVendors() {
         name: response.data.vendor.vendorName,
         token: response.data.token,
         neighborhoodId: assignedNeighborhood.id,
-        neighborhoodName: assignedNeighborhood.name
+        neighborhoodName: assignedNeighborhood.name,
       };
 
       STATE.createdVendors.push(createdVendor);
@@ -357,25 +398,28 @@ async function signupVendors() {
         id: response.data.vendor.id,
         name: response.data.vendor.vendorName,
         neighborhoodId: assignedNeighborhood.id,
-        neighborhoodName: assignedNeighborhood.name
+        neighborhoodName: assignedNeighborhood.name,
       });
 
       await delay(1000); // Delay between vendor creations
     } catch (error) {
-      logger.error(`❌ Failed to create vendor: ${vendorData.vendorName}`, error.message);
+      logger.error(
+        `❌ Failed to create vendor: ${vendorData.vendorName}`,
+        error.message,
+      );
       throw error;
     }
   }
 
-  logger.success('✅ All vendors created successfully', {
+  logger.success("✅ All vendors created successfully", {
     totalVendors: STATE.createdVendors.length,
-    vendors: STATE.createdVendors
+    vendors: STATE.createdVendors,
   });
 }
 
 // Pricing functions
 async function setBulkPricingForAllVendors() {
-  logger.info('🔄 Setting bulk pricing for all vendors');
+  logger.info("🔄 Setting bulk pricing for all vendors");
 
   apiClient.setAuthToken(STATE.tokens.admin);
 
@@ -383,39 +427,44 @@ async function setBulkPricingForAllVendors() {
     const vendor = STATE.createdVendors[i];
 
     // Create pricing for all neighborhoods
-    const pricingData = STATE.createdNeighborhoods.map((neighborhood, index) => ({
-      neighborhoodId: neighborhood.id,
-      price: 10.00 + (index * 2.50) + (i * 1.00) // Varied pricing
-    }));
+    const pricingData = STATE.createdNeighborhoods.map(
+      (neighborhood, index) => ({
+        neighborhoodId: neighborhood.id,
+        price: 10.0 + index * 2.5 + i * 1.0, // Varied pricing
+      }),
+    );
 
     try {
       const response = await apiClient.request({
-        method: 'PUT',
+        method: "PUT",
         url: `/api/admin/vendors/${vendor.id}/bulk-set-pricing`,
         data: {
-          neighborhoodPrices: pricingData
-        }
+          neighborhoodPrices: pricingData,
+        },
       });
 
       logger.success(`✅ Bulk pricing set for vendor: ${vendor.name}`, {
         vendorId: vendor.id,
         vendorName: vendor.name,
         pricingCount: pricingData.length,
-        pricing: pricingData
+        pricing: pricingData,
       });
 
       await delay(500); // Small delay between bulk operations
     } catch (error) {
-      logger.error(`❌ Failed to set bulk pricing for vendor: ${vendor.name}`, error.message);
+      logger.error(
+        `❌ Failed to set bulk pricing for vendor: ${vendor.name}`,
+        error.message,
+      );
       throw error;
     }
   }
 
-  logger.success('✅ Bulk pricing set for all vendors successfully');
+  logger.success("✅ Bulk pricing set for all vendors successfully");
 }
 
 async function verifyVendorPricingForAllNeighborhoods() {
-  logger.info('🔄 Verifying vendor pricing across all neighborhoods');
+  logger.info("🔄 Verifying vendor pricing across all neighborhoods");
 
   apiClient.setAuthToken(STATE.tokens.admin);
 
@@ -424,98 +473,119 @@ async function verifyVendorPricingForAllNeighborhoods() {
 
     try {
       const response = await apiClient.request({
-        method: 'GET',
-        url: `/api/vendor-pricing/neighborhoods?vendorId=${vendor.id}`
+        method: "GET",
+        url: `/api/vendor-pricing/neighborhoods?vendorId=${vendor.id}`,
       });
 
       const neighborhoodsWithPricing = response.data;
-      const pricedNeighborhoods = neighborhoodsWithPricing.filter(n => n.hasPricing);
+      const pricedNeighborhoods = neighborhoodsWithPricing.filter(
+        (n) => n.hasPricing,
+      );
 
       logger.success(`✅ Pricing verified for vendor: ${vendor.name}`, {
         vendorId: vendor.id,
         vendorName: vendor.name,
         totalNeighborhoods: neighborhoodsWithPricing.length,
         pricedNeighborhoods: pricedNeighborhoods.length,
-        pricing: pricedNeighborhoods.map(n => ({
+        pricing: pricedNeighborhoods.map((n) => ({
           neighborhoodId: n.id,
           neighborhoodName: n.name,
-          price: n.price
-        }))
+          price: n.price,
+        })),
       });
 
       // Verify that all neighborhoods have pricing
       if (pricedNeighborhoods.length !== STATE.createdNeighborhoods.length) {
-        logger.warn(`⚠️ Pricing mismatch for vendor ${vendor.name}: expected ${STATE.createdNeighborhoods.length}, got ${pricedNeighborhoods.length}`);
+        logger.warn(
+          `⚠️ Pricing mismatch for vendor ${vendor.name}: expected ${STATE.createdNeighborhoods.length}, got ${pricedNeighborhoods.length}`,
+        );
       }
 
       await delay(500); // Small delay between verifications
     } catch (error) {
-      logger.error(`❌ Failed to verify pricing for vendor: ${vendor.name}`, error.message);
+      logger.error(
+        `❌ Failed to verify pricing for vendor: ${vendor.name}`,
+        error.message,
+      );
       throw error;
     }
   }
 
-  logger.success('✅ Pricing verification completed for all vendors');
+  logger.success("✅ Pricing verification completed for all vendors");
 }
 
 // Neighborhood deletion test
 async function testNeighborhoodDeletion() {
-  logger.info('🔄 Testing neighborhood deletion');
+  logger.info("🔄 Testing neighborhood deletion");
 
   apiClient.setAuthToken(STATE.tokens.admin);
 
   // Select the last created neighborhood for deletion (not the initial one)
-  const neighborhoodToDelete = STATE.createdNeighborhoods.find(n => !n.isInitial);
+  const neighborhoodToDelete = STATE.createdNeighborhoods.find(
+    (n) => !n.isInitial,
+  );
 
   if (!neighborhoodToDelete) {
-    logger.warn('⚠️ No non-initial neighborhood available for deletion test');
+    logger.warn("⚠️ No non-initial neighborhood available for deletion test");
     return;
   }
 
   try {
     const response = await apiClient.request({
-      method: 'DELETE',
-      url: `/api/neighborhoods/${neighborhoodToDelete.id}`
+      method: "DELETE",
+      url: `/api/neighborhoods/${neighborhoodToDelete.id}`,
     });
 
-    logger.success(`✅ Neighborhood deleted successfully: ${neighborhoodToDelete.name}`, {
-      deletedNeighborhoodId: neighborhoodToDelete.id,
-      deletedNeighborhoodName: neighborhoodToDelete.name
-    });
+    logger.success(
+      `✅ Neighborhood deleted successfully: ${neighborhoodToDelete.name}`,
+      {
+        deletedNeighborhoodId: neighborhoodToDelete.id,
+        deletedNeighborhoodName: neighborhoodToDelete.name,
+      },
+    );
 
     // Verify deletion by trying to get all neighborhoods
     await verifyNeighborhoodDeletion(neighborhoodToDelete);
-
   } catch (error) {
-    logger.error(`❌ Failed to delete neighborhood: ${neighborhoodToDelete.name}`, error.message);
+    logger.error(
+      `❌ Failed to delete neighborhood: ${neighborhoodToDelete.name}`,
+      error.message,
+    );
     throw error;
   }
 }
 
 async function verifyNeighborhoodDeletion(deletedNeighborhood) {
-  logger.info('🔄 Verifying neighborhood deletion');
+  logger.info("🔄 Verifying neighborhood deletion");
 
   try {
     const response = await apiClient.request({
-      method: 'GET',
-      url: '/api/neighborhoods?limit=100'
+      method: "GET",
+      url: "/api/neighborhoods?limit=100",
     });
 
     const remainingNeighborhoods = response.data.neighborhoods;
-    const deletedNeighborhoodExists = remainingNeighborhoods.some(n => n.id === deletedNeighborhood.id);
+    const deletedNeighborhoodExists = remainingNeighborhoods.some(
+      (n) => n.id === deletedNeighborhood.id,
+    );
 
     if (!deletedNeighborhoodExists) {
-      logger.success(`✅ Neighborhood deletion verified: ${deletedNeighborhood.name} no longer exists`, {
-        deletedNeighborhoodId: deletedNeighborhood.id,
-        remainingCount: remainingNeighborhoods.length
-      });
+      logger.success(
+        `✅ Neighborhood deletion verified: ${deletedNeighborhood.name} no longer exists`,
+        {
+          deletedNeighborhoodId: deletedNeighborhood.id,
+          remainingCount: remainingNeighborhoods.length,
+        },
+      );
     } else {
-      logger.error(`❌ Neighborhood deletion failed: ${deletedNeighborhood.name} still exists`);
+      logger.error(
+        `❌ Neighborhood deletion failed: ${deletedNeighborhood.name} still exists`,
+      );
     }
 
     return !deletedNeighborhoodExists;
   } catch (error) {
-    logger.error('❌ Failed to verify neighborhood deletion', error.message);
+    logger.error("❌ Failed to verify neighborhood deletion", error.message);
     throw error;
   }
 }
@@ -526,58 +596,58 @@ async function runVendorPricingFlow() {
   timingTracker.startTracking();
 
   try {
-    logger.info('🚀 Starting Vendor Pricing Flow Test');
-    logger.info('Configuration', CONFIG);
+    logger.info("🚀 Starting Vendor Pricing Flow Test");
+    logger.info("Configuration", CONFIG);
 
     // Phase 1: Admin Setup
-    logger.info('\n📋 PHASE 1: ADMIN AND INITIAL SETUP');
+    logger.info("\n📋 PHASE 1: ADMIN AND INITIAL SETUP");
 
-    timingTracker.startOperation('signupAdmin');
+    timingTracker.startOperation("signupAdmin");
     await signupAdmin();
     timingTracker.endOperation();
     await delay(1000);
 
     // Phase 2: Neighborhood Creation
-    logger.info('\n🏘️ PHASE 2: NEIGHBORHOOD CREATION');
+    logger.info("\n🏘️ PHASE 2: NEIGHBORHOOD CREATION");
 
-    timingTracker.startOperation('createNeighborhoods');
+    timingTracker.startOperation("createNeighborhoods");
     await createNeighborhoods();
     timingTracker.endOperation();
     await delay(1000);
 
-    timingTracker.startOperation('verifyNeighborhoodsCount');
+    timingTracker.startOperation("verifyNeighborhoodsCount");
     await verifyNeighborhoodsCount();
     timingTracker.endOperation();
     await delay(1000);
 
     // Phase 3: Vendor Creation
-    logger.info('\n🏪 PHASE 3: VENDOR CREATION');
+    logger.info("\n🏪 PHASE 3: VENDOR CREATION");
 
-    timingTracker.startOperation('signupVendors');
+    timingTracker.startOperation("signupVendors");
     await signupVendors();
     timingTracker.endOperation();
     await delay(1000);
 
     // Phase 4: Bulk Pricing Setup
-    logger.info('\n💰 PHASE 4: BULK PRICING SETUP');
+    logger.info("\n💰 PHASE 4: BULK PRICING SETUP");
 
-    timingTracker.startOperation('setBulkPricingForAllVendors');
+    timingTracker.startOperation("setBulkPricingForAllVendors");
     await setBulkPricingForAllVendors();
     timingTracker.endOperation();
     await delay(1000);
 
     // Phase 5: Pricing Verification
-    logger.info('\n✅ PHASE 5: PRICING VERIFICATION');
+    logger.info("\n✅ PHASE 5: PRICING VERIFICATION");
 
-    timingTracker.startOperation('verifyVendorPricingForAllNeighborhoods');
+    timingTracker.startOperation("verifyVendorPricingForAllNeighborhoods");
     await verifyVendorPricingForAllNeighborhoods();
     timingTracker.endOperation();
     await delay(1000);
 
     // Phase 6: Neighborhood Deletion Test
-    logger.info('\n🗑️ PHASE 6: NEIGHBORHOOD DELETION TEST');
+    logger.info("\n🗑️ PHASE 6: NEIGHBORHOOD DELETION TEST");
 
-    timingTracker.startOperation('testNeighborhoodDeletion');
+    timingTracker.startOperation("testNeighborhoodDeletion");
     await testNeighborhoodDeletion();
     timingTracker.endOperation();
     await delay(1000);
@@ -586,8 +656,8 @@ async function runVendorPricingFlow() {
     const testDuration = (testEndTime - testStartTime) / 1000;
 
     // Test Summary
-    logger.success('\n🎉 VENDOR PRICING FLOW TEST COMPLETED SUCCESSFULLY!');
-    logger.info('Test Summary', {
+    logger.success("\n🎉 VENDOR PRICING FLOW TEST COMPLETED SUCCESSFULLY!");
+    logger.info("Test Summary", {
       totalRequests: STATE.requestCount,
       duration: `${testDuration} seconds`,
       neighborhoodsCreated: STATE.createdNeighborhoods.length,
@@ -595,13 +665,13 @@ async function runVendorPricingFlow() {
       adminId: STATE.ids.admin,
       testData: {
         adminEmail: TEST_DATA.admin.email,
-        neighborhoods: STATE.createdNeighborhoods.map(n => n.name),
-        vendors: STATE.createdVendors.map(v => v.name)
-      }
+        neighborhoods: STATE.createdNeighborhoods.map((n) => n.name),
+        vendors: STATE.createdVendors.map((v) => v.name),
+      },
     });
 
     // Timing Statistics
-    timingTracker.printStats();
+    timingTracker.Stats();
 
     return {
       success: true,
@@ -609,31 +679,30 @@ async function runVendorPricingFlow() {
       requestCount: STATE.requestCount,
       neighborhoodsCreated: STATE.createdNeighborhoods.length,
       vendorsCreated: STATE.createdVendors.length,
-      timingStats: timingTracker.getStats()
+      timingStats: timingTracker.getStats(),
     };
-
   } catch (error) {
     const testEndTime = Date.now();
     const testDuration = (testEndTime - testStartTime) / 1000;
 
-    logger.error('\n💥 VENDOR PRICING FLOW TEST FAILED!');
-    logger.error('Error Details', {
+    logger.error("\n💥 VENDOR PRICING FLOW TEST FAILED!");
+    logger.error("Error Details", {
       message: error.message,
       stack: error.stack,
       duration: `${testDuration} seconds`,
       requestCount: STATE.requestCount,
-      currentState: STATE
+      currentState: STATE,
     });
 
     // Timing Statistics (partial)
-    timingTracker.printStats();
+    timingTracker.Stats();
 
     return {
       success: false,
       error: error.message,
       duration: testDuration,
       requestCount: STATE.requestCount,
-      timingStats: timingTracker.getStats()
+      timingStats: timingTracker.getStats(),
     };
   }
 }
@@ -643,15 +712,15 @@ if (require.main === module) {
   runVendorPricingFlow()
     .then((result) => {
       if (result.success) {
-        console.log('\n✅ Vendor Pricing Test completed successfully!');
+        console.log("\n✅ Vendor Pricing Test completed successfully!");
         process.exit(0);
       } else {
-        console.log('\n❌ Vendor Pricing Test failed!');
+        console.log("\n❌ Vendor Pricing Test failed!");
         process.exit(1);
       }
     })
     .catch((error) => {
-      console.error('\n💥 Unexpected error:', error);
+      console.error("\n💥 Unexpected error:", error);
       process.exit(1);
     });
 }
@@ -661,5 +730,5 @@ module.exports = {
   Logger,
   ApiClient,
   CONFIG,
-  TEST_DATA
+  TEST_DATA,
 };
