@@ -883,7 +883,13 @@ class AdminService {
               ratingSum: true
             }
           },
-          attachments: true 
+          neighborhood: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          attachments: true
         },
         orderBy: { createdAt: 'desc' },
         skip,
