@@ -35,6 +35,17 @@ class OrderController {
     }
   }
 
+  // Vendor accept order as-is
+  async vendorAccept(req, res) {
+    try {
+      const { id } = req.params;
+      const result = await orderService.vendorAccept(id, req.vendor.id, req.tenant.id);
+      return successResponse(res, result, 'Order accepted successfully');
+    } catch (error) {
+      return errorResponse(res, error.message, 400);
+    }
+  }
+
   // User approve order
   async userApprove(req, res) {
     try {

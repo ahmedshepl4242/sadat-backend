@@ -478,6 +478,85 @@ class OrderService {
     return this.addAttachmentUrls(convertBigIntToString(updatedOrder));
   }
 
+  // Vendor accept order as-is (using the order's existing price)
+  async vendorAccept(orderId, vendorId, tenantId) {
+    // Verify order exists and belongs to vendor
+    const order = await prisma.order.findFirst({
+      where: {
+        id: BigInt(orderId),
+        vendorId: BigInt(vendorId),
+        tenantId,
+        status: 'PENDING'
+      }
+    });
+
+    if (!order) {
+      throw new Error('Order not found or cannot be modified');
+    }
+
+    if (!order.price) {
+      throw new Error('Order has no price set. Please send an offer with a price instead');
+    }
+
+    // Update order directly to COUNTER_OFFER_ACCEPTED using the existing price
+    const updatedOrder = await prisma.order.update({
+      where: {
+        id_tenantId: {
+          id: BigInt(orderId),
+          tenantId
+        }
+      },
+      data: {
+        status: 'COUNTER_OFFER_ACCEPTED',
+        counterOfferSentAt: new Date(),
+        acceptedByVend: new Date()
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            userName: true,
+            phoneNumber: true
+          }
+        },
+        vendor: {
+          select: {
+            id: true,
+            vendorName: true,
+            contactNumber: true,
+            address: true
+          }
+        },
+        attachments: true
+      }
+    });
+
+    // Send notifications to user and all available captains
+    setImmediate(async () => {
+      try {
+        await Promise.all([
+          updatedOrder.userId ? notificationService.sendToUser(
+            updatedOrder.userId,
+            'تمت الموافقة على طلبك',
+            `تمت الموافقة على طلبك بسعر ${updatedOrder.price} جنيه، سعر التوصيل ${updatedOrder.deliveryPrice} جنيه. سيتم تعيين كابتن قريباً.`,
+            tenantId,
+            { orderId: orderId.toString(), price: updatedOrder.price?.toString(), deliveryPrice: updatedOrder.deliveryPrice?.toString(), type: 'ORDER_APPROVED' }
+          ) : Promise.resolve(true),
+          notificationService.sendToAllAvailableCaptains(
+            'طلب توصيل جديد',
+            'يوجد طلب توصيل جديد متاح. تحقق من التطبيق للقبول.',
+            { orderId: orderId.toString(), type: 'DELIVERY_AVAILABLE' },
+            tenantId
+          )
+        ]);
+      } catch (error) {
+        console.error('Failed to send order approval notifications:', error);
+      }
+    });
+
+    return this.addAttachmentUrls(convertBigIntToString(updatedOrder));
+  }
+
   // User approve order
   async userApprove(orderId, userId, tenantId) {
     // Verify order exists and belongs to user

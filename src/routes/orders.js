@@ -579,6 +579,48 @@ router.put('/:id/vendor-counter-offer', protectVendor, orderValidation.idParam, 
 
 /**
  * @swagger
+ * /api/orders/{id}/vendor-accept:
+ *   put:
+ *     summary: Vendor accept order as-is (using the order's existing price)
+ *     tags: [Orders]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/TenantId'
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Order ID
+ *     responses:
+ *       200:
+ *         description: Order accepted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Order'
+ *                 message:
+ *                   type: string
+ *                   example: Order accepted successfully
+ *       400:
+ *         description: Order not found or cannot be accepted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.put('/:id/vendor-accept', protectVendor, orderValidation.idParam, orderController.vendorAccept);
+
+/**
+ * @swagger
  * /api/orders/{id}/vendor-reject:
  *   put:
  *     summary: Vendor reject order
