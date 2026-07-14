@@ -136,6 +136,7 @@ class OrderService {
     const {
       vendorId,
       description,
+      price,
       additionalNotes,
       userAddress,
       userLongitude,
