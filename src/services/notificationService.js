@@ -343,12 +343,13 @@ class NotificationService {
     }
   }
 
-  // Build a human-readable order summary line (user, vendor, neighborhood, description, notes) for notification bodies
-  buildOrderDetailsText({ userName, vendorName, neighborhoodName, description, notes } = {}) {
+  // Build a human-readable order summary line (user, vendor, neighborhood, captain, description, notes) for notification bodies
+  buildOrderDetailsText({ userName, vendorName, neighborhoodName, captainName, description, notes } = {}) {
     const parts = [];
     if (userName) parts.push(`العميل: ${userName}`);
     if (vendorName) parts.push(`المتجر: ${vendorName}`);
     if (neighborhoodName) parts.push(`الحي: ${neighborhoodName}`);
+    if (captainName) parts.push(`الكابتن: ${captainName}`);
     if (description) parts.push(`الوصف: ${description}`);
     if (notes) parts.push(`ملاحظات: ${notes}`);
     return parts.join(' - ');
@@ -452,10 +453,12 @@ class NotificationService {
 
   // Notify admin whenever any order is delivered by a captain
   async notifyAdminOrderDelivered(orderId, tenantId, orderDetails = {}) {
-    const detailsText = this.buildOrderDetailsText(orderDetails);
-    const body = detailsText
-      ? `تم تسليم الطلب بنجاح. ${detailsText}`
+    const { captainName, ...restDetails } = orderDetails;
+    const detailsText = this.buildOrderDetailsText(restDetails);
+    const intro = captainName
+      ? `قام الكابتن ${captainName} بتسليم الطلب بنجاح.`
       : 'تم تسليم أحد الطلبات بنجاح.';
+    const body = detailsText ? `${intro} ${detailsText}` : intro;
     return await this.sendToAdmin(
       'تم تسليم الطلب',
       body,

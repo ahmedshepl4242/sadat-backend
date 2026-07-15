@@ -1549,6 +1549,7 @@ class OrderService {
             userName: result.updatedOrder.user?.userName,
             vendorName: result.updatedOrder.vendor?.vendorName,
             neighborhoodName: result.updatedOrder.vendor?.neighborhood?.name,
+            captainName: result.updatedOrder.captain?.userName,
           }),
         ]);
       } catch (error) {
