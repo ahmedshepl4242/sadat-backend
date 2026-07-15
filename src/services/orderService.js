@@ -1535,14 +1535,21 @@ class OrderService {
       }
     }
 
-    // Send delivery notification
+    // Send delivery notifications (customer, if any, and always the admin)
     setImmediate(async () => {
       try {
-        await notificationService.notifyOrderDelivered(
-          result.updatedOrder.userId,
-          orderId,
-          tenantId,
-        );
+        await Promise.all([
+          notificationService.notifyOrderDelivered(
+            result.updatedOrder.userId,
+            orderId,
+            tenantId,
+          ),
+          notificationService.notifyAdminOrderDelivered(orderId, tenantId, {
+            userName: result.updatedOrder.user?.userName,
+            vendorName: result.updatedOrder.vendor?.vendorName,
+            neighborhoodName: result.updatedOrder.vendor?.neighborhood?.name,
+          }),
+        ]);
       } catch (error) {
         console.error("Failed to send delivery notification:", error);
       }

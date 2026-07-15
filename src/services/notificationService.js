@@ -442,6 +442,20 @@ class NotificationService {
     );
   }
 
+  // Notify admin whenever any order is delivered by a captain
+  async notifyAdminOrderDelivered(orderId, tenantId, orderDetails = {}) {
+    const detailsText = this.buildOrderDetailsText(orderDetails);
+    const body = detailsText
+      ? `تم تسليم الطلب بنجاح. ${detailsText}`
+      : 'تم تسليم أحد الطلبات بنجاح.';
+    return await this.sendToAdmin(
+      'تم تسليم الطلب',
+      body,
+      { orderId: orderId.toString(), type: 'ORDER_DELIVERED' },
+      tenantId
+    );
+  }
+
   async notifyCaptainArrived(userId, orderId, tenantId) {
     if (!userId) return true; // No user to notify for vendor-created orders
 
