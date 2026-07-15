@@ -1206,6 +1206,7 @@ class OrderService {
             latitude: true,
             ratingSum: true,
             ratingCount: true,
+            photo: true,
           },
         },
         neighborhood: {
@@ -1241,7 +1242,9 @@ class OrderService {
     }
 
     const orderResponse = convertBigIntToString(order);
-    return this.addAttachmentUrls(orderResponse);
+    return this.addAttachmentUrls(
+      this.addCaptainUrlsToArray([orderResponse])[0],
+    );
   }
 
   // Vendor reject order
@@ -1858,6 +1861,7 @@ class OrderService {
               maxCurrentOrders: true,
               earningSinceLastActivation: true,
               maxEarningsSinceLastActivation: true,
+              photo: true,
             },
           },
           neighborhood: {
@@ -1876,8 +1880,8 @@ class OrderService {
     ]);
 
     // Convert BigInt to string and add signed URLs for attachments
-    const ordersWithUrls = this.addAttachmentUrlsToArray(
-      convertBigIntToString(orders),
+    const ordersWithUrls = this.addCaptainUrlsToArray(
+      this.addAttachmentUrlsToArray(convertBigIntToString(orders)),
     );
 
     return {

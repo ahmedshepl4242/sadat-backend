@@ -834,7 +834,8 @@ class AdminService {
               userName: true,
               phoneNumber: true,
               ratingCount: true,
-              ratingSum: true
+              ratingSum: true,
+              photo: true
             }
           },
           vendor: {
@@ -867,7 +868,9 @@ class AdminService {
     ]);
 
     // Convert BigInt to string and add signed URLs for attachments
-    const ordersWithUrls = ordersService.addAttachmentUrlsToArray(convertBigIntToString(orders));
+    const ordersWithUrls = ordersService.addCaptainUrlsToArray(
+      ordersService.addAttachmentUrlsToArray(convertBigIntToString(orders))
+    );
 
     return {
       orders: ordersWithUrls,
@@ -904,7 +907,8 @@ class AdminService {
               userName: true,
               phoneNumber: true,
               ratingCount: true,
-              ratingSum: true
+              ratingSum: true,
+              photo: true
             }
           },
           neighborhood: {
@@ -923,7 +927,9 @@ class AdminService {
     ]);
 
     // Convert BigInt to string and add signed URLs for attachments
-    const ordersWithUrls = ordersService.addAttachmentUrlsToArray(convertBigIntToString(orders));
+    const ordersWithUrls = ordersService.addCaptainUrlsToArray(
+      ordersService.addAttachmentUrlsToArray(convertBigIntToString(orders))
+    );
 
     return {
       orders: ordersWithUrls,
