@@ -399,7 +399,7 @@ class NotificationService {
     return results.every(result => result);
   }
 
-  async notifyCaptainAccepted(vendorId, userId, orderId, captainId, tenantId) {
+  async notifyCaptainAccepted(vendorId, userId, orderId, captainId, tenantId, captainName) {
     const results = await Promise.all([
       this.sendToVendor(
         vendorId,
@@ -415,6 +415,14 @@ class NotificationService {
         tenantId,
         { orderId: orderId.toString(), type: 'CAPTAIN_ASSIGNED', captainId: captainId.toString() }
       ) : Promise.resolve(true),
+      this.sendToAdmin(
+        'تم قبول الطلب',
+        captainName
+          ? `الكابتن ${captainName} قبل الطلب رقم ${orderId}.`
+          : `تم قبول الطلب رقم ${orderId} من قبل الكابتن.`,
+        { orderId: orderId.toString(), captainId: captainId.toString(), type: 'ORDER_ACCEPTED' },
+        tenantId
+      ),
     ]);
 
     return results.every(result => result);

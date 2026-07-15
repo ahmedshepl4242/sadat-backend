@@ -898,6 +898,7 @@ class OrderService {
               orderId,
               captainId,
               tenantId,
+              captain.userName,
             );
           }
         } catch (error) {
