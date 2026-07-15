@@ -103,6 +103,7 @@ class OrderService {
         const orderDetails = {
           userName: order.user?.userName,
           neighborhoodName: order.neighborhood?.name,
+          description: order.description,
           notes: order.additionalNotes,
         };
         const detailsText =
@@ -246,6 +247,7 @@ class OrderService {
       const orderDetails = {
         userName: order.user?.userName,
         vendorName: order.vendor?.vendorName,
+        description: order.description,
         notes: order.additionalNotes,
       };
       await Promise.all([
@@ -368,6 +370,7 @@ class OrderService {
       userName: order.user?.userName,
       vendorName: order.vendor?.vendorName,
       neighborhoodName: order.neighborhood?.name,
+      description: order.description,
       notes: order.additionalNotes,
     };
 
@@ -489,6 +492,7 @@ class OrderService {
         ),
         notificationService.notifyAdminNewVendorOrder(order.id, tenantId, {
           vendorName: order.vendor?.vendorName,
+          description: order.description,
           notes: order.additionalNotes,
         }),
       ]);

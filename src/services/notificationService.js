@@ -343,12 +343,13 @@ class NotificationService {
     }
   }
 
-  // Build a human-readable order summary line (user, vendor, neighborhood, notes) for notification bodies
-  buildOrderDetailsText({ userName, vendorName, neighborhoodName, notes } = {}) {
+  // Build a human-readable order summary line (user, vendor, neighborhood, description, notes) for notification bodies
+  buildOrderDetailsText({ userName, vendorName, neighborhoodName, description, notes } = {}) {
     const parts = [];
     if (userName) parts.push(`العميل: ${userName}`);
     if (vendorName) parts.push(`المتجر: ${vendorName}`);
     if (neighborhoodName) parts.push(`الحي: ${neighborhoodName}`);
+    if (description) parts.push(`الوصف: ${description}`);
     if (notes) parts.push(`ملاحظات: ${notes}`);
     return parts.join(' - ');
   }
