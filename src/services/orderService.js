@@ -51,6 +51,7 @@ class OrderService {
       neighborhoodId,
       attachments,
       waitingTime,
+      deliveryPrice,
     } = orderData;
 
     // Create special admin order with COUNTER_OFFER_ACCEPTED status
@@ -67,7 +68,7 @@ class OrderService {
         userLongitude: userLongitude ? parseFloat(userLongitude) : null,
         userLatitude: userLatitude ? parseFloat(userLatitude) : null,
         phoneNumber,
-        deliveryPrice: null,
+        deliveryPrice: deliveryPrice ? parseFloat(deliveryPrice) : null,
         waitingTime: waitingTime ? parseInt(waitingTime) : null,
         attachments:
           attachments && attachments.length > 0
@@ -283,6 +284,7 @@ class OrderService {
       attachments,
       skipApproval,
       waitingTime,
+      deliveryPrice,
     } = orderData;
 
     const vendor = await prisma.vendor.findFirst({
@@ -320,7 +322,7 @@ class OrderService {
         userLongitude: userLongitude ? parseFloat(userLongitude) : null,
         userLatitude: userLatitude ? parseFloat(userLatitude) : null,
         phoneNumber,
-        deliveryPrice: null,
+        deliveryPrice: deliveryPrice ? parseFloat(deliveryPrice) : null,
         waitingTime: waitingTime ? parseInt(waitingTime) : null,
         acceptedByVend: skipApproval ? new Date() : null,
         attachments:
