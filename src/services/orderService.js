@@ -1172,6 +1172,37 @@ class OrderService {
     };
   }
 
+  // Re-send the "delivery available" notification to all available captains
+  // for every order that is still waiting for a captain to accept it
+  // (vendor-approved but not yet picked up).
+  async resendPendingOrderNotificationsToCaptains(tenantId) {
+    const pendingOrders = await prisma.order.findMany({
+      where: {
+        tenantId,
+        status: "COUNTER_OFFER_ACCEPTED",
+        captainId: null,
+      },
+      select: { id: true },
+    });
+
+    if (pendingOrders.length === 0) {
+      return { notifiedOrders: 0 };
+    }
+
+    await Promise.all(
+      pendingOrders.map((order) =>
+        notificationService.sendToAllAvailableCaptains(
+          "طلب توصيل جديد",
+          "يوجد طلب توصيل جديد متاح. تحقق من التطبيق للقبول.",
+          { orderId: order.id.toString(), type: "DELIVERY_AVAILABLE" },
+          tenantId,
+        ),
+      ),
+    );
+
+    return { notifiedOrders: pendingOrders.length };
+  }
+
   // Get order by ID
   async getOrderById(orderId, tenantId) {
     const order = await prisma.order.findFirst({

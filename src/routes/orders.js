@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
-const { protect, protectVendor, protectCaptain } = require('../middlewares/auth');
+const { protect, protectVendor, protectCaptain, protectAdmin } = require('../middlewares/auth');
 const { orderValidation, paginationValidation } = require('../utils/validation');
 
 /**
@@ -61,6 +61,38 @@ const { orderValidation, paginationValidation } = require('../utils/validation')
  *                   example: Available orders retrieved successfully
  */
 router.get('/available', paginationValidation, orderController.getAvailableOrders);
+
+/**
+ * @swagger
+ * /api/orders/resend-pending-notifications:
+ *   post:
+ *     summary: Re-send captain notifications for all orders still waiting for a captain
+ *     tags: [Orders]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/TenantId'
+ *     responses:
+ *       200:
+ *         description: Notifications resent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     notifiedOrders:
+ *                       type: integer
+ *                 message:
+ *                   type: string
+ *                   example: Notifications resent successfully
+ */
+router.post('/resend-pending-notifications', protectAdmin, orderController.resendPendingOrderNotifications);
 
 /**
  * @swagger

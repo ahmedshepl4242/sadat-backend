@@ -113,6 +113,16 @@ class OrderController {
     }
   }
 
+  // Re-send captain notifications for orders still waiting for a captain
+  async resendPendingOrderNotifications(req, res) {
+    try {
+      const result = await orderService.resendPendingOrderNotificationsToCaptains(req.tenant.id);
+      return successResponse(res, result, 'Notifications resent successfully');
+    } catch (error) {
+      return errorResponse(res, error.message, 400);
+    }
+  }
+
   // Get order by ID
   async getOrderById(req, res) {
     try {
