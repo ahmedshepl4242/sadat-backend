@@ -239,6 +239,12 @@ class OrderService {
             },
           },
         },
+        neighborhood: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         attachments: true,
       },
     });
@@ -478,6 +484,12 @@ class OrderService {
                 name: true,
               },
             },
+          },
+        },
+        neighborhood: {
+          select: {
+            id: true,
+            name: true,
           },
         },
       },
