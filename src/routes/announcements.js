@@ -82,6 +82,7 @@ router.post('/:id/publish', protectAdmin, async (req, res) => {
     const result = await announcementService.publish(req.params.id, req.tenant.id, { userIds, captainIds, vendorIds });
     return successResponse(res, result, 'Announcement published and notifications sent');
   } catch (error) {
+    console.error('[announcements/publish] failed:', error);
     return errorResponse(res, error.message, 400);
   }
 });
