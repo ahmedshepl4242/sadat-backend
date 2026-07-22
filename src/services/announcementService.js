@@ -12,6 +12,9 @@ class AnnouncementService {
       is_published: a.isPublished,
       published_at: a.publishedAt ? a.publishedAt.toISOString() : null,
       created_at: a.createdAt.toISOString(),
+      target_users: a.targetUsers,
+      target_captains: a.targetCaptains,
+      target_vendors: a.targetVendors,
     };
   }
 
@@ -32,16 +35,25 @@ class AnnouncementService {
     };
   }
 
-  async getPublished(tenantId, page = 1, limit = 20) {
+  // audience: 'user' | 'captain' | 'vendor' | undefined (undefined = no role filter, e.g. admin preview)
+  async getPublished(tenantId, page = 1, limit = 20, audience) {
     const skip = (page - 1) * limit;
+    const audienceFilter = {
+      user: { targetUsers: true },
+      captain: { targetCaptains: true },
+      vendor: { targetVendors: true },
+    }[audience];
+
+    const where = { tenantId, isPublished: true, ...audienceFilter };
+
     const [announcements, total] = await Promise.all([
       prisma.announcement.findMany({
-        where: { tenantId, isPublished: true },
+        where,
         orderBy: { publishedAt: 'desc' },
         skip,
         take: limit,
       }),
-      prisma.announcement.count({ where: { tenantId, isPublished: true } }),
+      prisma.announcement.count({ where }),
     ]);
     return {
       announcements: announcements.map(a => this._serialize(a)),
@@ -90,9 +102,23 @@ class AnnouncementService {
     });
     if (!existing) throw new Error('Announcement not found');
 
+    // userIds/captainIds/vendorIds: null = all, [] = skip, [ids] = specific
+    const skipUsers = Array.isArray(userIds) && userIds.length === 0;
+    const skipCaptains = Array.isArray(captainIds) && captainIds.length === 0;
+    const skipVendors = Array.isArray(vendorIds) && vendorIds.length === 0;
+
     const updated = await prisma.announcement.update({
       where: { id_tenantId: { id: BigInt(id), tenantId } },
-      data: { isPublished: true, publishedAt: new Date() },
+      data: {
+        isPublished: true,
+        publishedAt: new Date(),
+        // "Specific" targeting still marks the role as a target for News-tab
+        // visibility purposes (per-role, not per-individual) — only fully
+        // skipping a role (empty array) excludes it from that role's tab.
+        targetUsers: !skipUsers,
+        targetCaptains: !skipCaptains,
+        targetVendors: !skipVendors,
+      },
     });
 
     const serialized = this._serialize(updated);
@@ -101,10 +127,6 @@ class AnnouncementService {
       announcementId: serialized.id,
       ...(existing.imageUrl ? { imageUrl: existing.imageUrl } : {}),
     };
-    // userIds/captainIds/vendorIds: null = all, [] = skip, [ids] = specific
-    const skipUsers = Array.isArray(userIds) && userIds.length === 0;
-    const skipCaptains = Array.isArray(captainIds) && captainIds.length === 0;
-    const skipVendors = Array.isArray(vendorIds) && vendorIds.length === 0;
 
     if (!skipUsers) {
       const send = Array.isArray(userIds) && userIds.length > 0

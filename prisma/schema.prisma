@@ -385,14 +385,20 @@ model Tenant {
 }
 
 model Announcement {
-  id          BigInt    @default(autoincrement())
-  tenantId    String    @map("tenant_id")
-  title       String
-  body        String
-  imageUrl    String?   @map("image_url")
-  isPublished Boolean   @default(false) @map("is_published")
-  publishedAt DateTime? @map("published_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  id             BigInt    @default(autoincrement())
+  tenantId       String    @map("tenant_id")
+  title          String
+  body           String
+  imageUrl       String?   @map("image_url")
+  isPublished    Boolean   @default(false) @map("is_published")
+  publishedAt    DateTime? @map("published_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  // Audience this announcement was published to. Default true on all three so
+  // pre-existing rows (published before this feature existed) keep showing to
+  // everyone, matching prior behavior.
+  targetUsers    Boolean   @default(true) @map("target_users")
+  targetCaptains Boolean   @default(true) @map("target_captains")
+  targetVendors  Boolean   @default(true) @map("target_vendors")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 

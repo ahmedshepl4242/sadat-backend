@@ -86,11 +86,12 @@ router.post('/:id/publish', protectAdmin, async (req, res) => {
   }
 });
 
-// Public: list published only (for user & captain apps)
+// Public: list published only (for user, captain & vendor apps)
+// audience: 'user' | 'captain' | 'vendor' — filters to announcements targeted at that role
 router.get('/public', async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
-    const result = await announcementService.getPublished(req.tenant.id, Number(page), Number(limit));
+    const { page = 1, limit = 20, audience } = req.query;
+    const result = await announcementService.getPublished(req.tenant.id, Number(page), Number(limit), audience);
     return successResponse(res, result, 'Announcements retrieved successfully');
   } catch (error) {
     return errorResponse(res, error.message, 400);
