@@ -71,7 +71,7 @@ class NotificationService {
     }
   }
 
-  // Remove a dead FCM token from whichever entity (user/vendor/captain/tenant) owns it
+  // Remove a dead FCM token from whichever entity (user/vendor/captain/tenant/admin device) owns it
   async clearStaleToken(token) {
     try {
       await Promise.all([
@@ -79,6 +79,7 @@ class NotificationService {
         prisma.vendor.updateMany({ where: { fcmToken: token }, data: { fcmToken: null } }),
         prisma.captain.updateMany({ where: { fcmToken: token }, data: { fcmToken: null } }),
         prisma.tenant.updateMany({ where: { fcmToken: token }, data: { fcmToken: null } }),
+        prisma.adminDevice.deleteMany({ where: { fcmToken: token } }),
       ]);
     } catch (error) {
       console.error('Error clearing stale FCM token:', error);
@@ -246,20 +247,21 @@ class NotificationService {
     }
   }
 
-  // Send notification to admin
+  // Send notification to admin (all registered devices for this tenant)
   async sendToAdmin(title, body, data = {}, tenantId) {
     try {
-      const admin = await prisma.tenant.findUnique({
-        where: { id: tenantId },
-        select: { fcmToken: true, tenantName: true },
+      const devices = await prisma.adminDevice.findMany({
+        where: { tenantId },
+        select: { fcmToken: true },
       });
 
-      if (!admin || !admin.fcmToken) {
+      const tokens = devices.map(d => d.fcmToken).filter(Boolean);
+      if (tokens.length === 0) {
         console.log('Admin not found or no FCM token');
         return false;
       }
 
-      return await this.sendNotification(admin.fcmToken, title, body, {
+      return await this.sendMulticastNotification(tokens, title, body, {
         ...data,
         userType: 'ADMIN',
       });

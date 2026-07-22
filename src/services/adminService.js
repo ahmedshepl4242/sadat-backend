@@ -64,6 +64,10 @@ class AdminService {
         }
       });
 
+      if (fcmToken) {
+        await tx.adminDevice.create({ data: { tenantId, fcmToken } });
+      }
+
       // 2. Create neighborhood
       const neighborhood = await tx.neighborhood.create({
         data: {
@@ -204,7 +208,7 @@ class AdminService {
 
   // Update admin profile
   async updateProfile(adminId, updateData, tenantId) {
-    const { userName, email, phoneNumber, address, fcmToken } = updateData;
+    const { userName, email, phoneNumber, address } = updateData;
 
     // Check if email, tenantName, or phone number is being changed and if it already exists
     if (email || userName || phoneNumber) {
@@ -232,8 +236,7 @@ class AdminService {
         ...(userName && { tenantName: userName }),
         ...(email && { email }),
         ...(phoneNumber && { phoneNumber }),
-        ...(address !== undefined && { address }),
-        ...(fcmToken !== undefined && { fcmToken })
+        ...(address !== undefined && { address })
       },
       select: {
         id: true,
@@ -273,21 +276,27 @@ class AdminService {
     return convertBigIntToString(admin);
   }
 
-  // Update FCM token
+  // Register FCM token for this admin device (one row per device, so logging in
+  // on a new device doesn't stop push notifications on other devices)
   async updateFCMToken(adminId, fcmToken, tenantId) {
-    const updatedAdmin = await prisma.tenant.update({
+    if (!fcmToken) {
+      throw new Error('fcmToken is required');
+    }
+
+    await prisma.adminDevice.upsert({
       where: {
-        id: tenantId
+        tenantId_fcmToken: { tenantId, fcmToken }
       },
-      data: { fcmToken },
-      select: {
-        id: true,
-        tenantName: true,
-        fcmToken: true
-      }
+      create: { tenantId, fcmToken },
+      update: { updatedAt: new Date() }
     });
 
-    return convertBigIntToString(updatedAdmin);
+    const admin = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { id: true, tenantName: true }
+    });
+
+    return convertBigIntToString({ ...admin, fcmToken });
   }
 
   // Lock/Unlock Captain (with write-through cache)

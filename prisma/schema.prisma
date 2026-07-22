@@ -380,8 +380,23 @@ model Tenant {
   categories               Category[]
   vendorCategories         VendorCategory[]
   announcements            Announcement[]
+  adminDevices             AdminDevice[]
 
   @@map("tenants")
+}
+
+model AdminDevice {
+  id        BigInt   @default(autoincrement())
+  tenantId  String   @map("tenant_id")
+  fcmToken  String   @map("fcm_token")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([id, tenantId])
+  @@unique([tenantId, fcmToken])
+  @@map("admin_devices")
 }
 
 model Announcement {
