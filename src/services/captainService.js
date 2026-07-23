@@ -1047,24 +1047,13 @@ class CaptainService {
         throw new Error("Invalid refresh token: no captain");
       }
 
-      // Generate new tokens with tenant context
+      // Only issue a new access token. The refresh token is intentionally NOT
+      // rotated: it stays valid for its full lifetime. Rotating it on every
+      // refresh caused persistent "session expired" errors whenever the client
+      // failed to persist the newly-issued token in time (e.g. the app was
+      // killed mid-refresh, a secure-storage write failed, or two refreshes
+      // raced), because the stored token would then no longer match the DB.
       const newToken = generateToken(captain.id, "captain", tenantId);
-      const newRefreshToken = generateRefreshToken(
-        captain.id,
-        "captain",
-        tenantId,
-      );
-
-      // Update refresh token in database
-      await prisma.captain.update({
-        where: {
-          id_tenantId: {
-            id: captain.id,
-            tenantId: tenantId,
-          },
-        },
-        data: { refreshToken: newRefreshToken },
-      });
 
       // Return captain data without password
       const captainData = {
@@ -1078,7 +1067,7 @@ class CaptainService {
       return {
         captain: convertBigIntToString(captainData),
         token: newToken,
-        refreshToken: newRefreshToken,
+        refreshToken: refreshToken,
       };
     } catch (error) {
       console.log(error);
